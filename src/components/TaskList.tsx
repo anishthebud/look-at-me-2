@@ -5,6 +5,8 @@ import { TaskCard } from './TaskCard'
 import { TaskForm } from './TaskForm'
 import { CreateTaskData, TaskFormData } from '../types'
 import { parseWebsitesString } from '../utils/validation'
+import { useToast } from '../hooks/useToast'
+import Toast from './Toast'
 
 export interface TaskListProps {
   className?: string
@@ -25,6 +27,8 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
     goToPage,
     refreshTasks
   } = useTasks()
+
+  const { modal, removeModal, showSuccessModal, showErrorModal } = useToast()
 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
@@ -101,9 +105,19 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
 
   const handleCompleteTask = async (taskId: string): Promise<void> => {
     setActionError(null)
+    
+    // Find the task to get its name for the toast
+    const task = tasks.find(t => t.id === taskId)
+    const taskName = task?.name || 'Task'
+    
     const result = await completeTask(taskId)
     
-    if (!result.success) {
+    if (result.success) {
+      // Show success modal
+      showSuccessModal(taskName, 'has been completed successfully!')
+    } else {
+      // Show error modal and set action error
+      showErrorModal(taskName, `failed to complete: ${result.error}`)
       setActionError(result.error || 'Failed to complete task')
     }
   }
@@ -292,6 +306,18 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
             Next →
           </button>
         </div>
+      )}
+      
+      {/* Completion modal */}
+      {modal && (
+        <Toast
+          key={modal.id}
+          message={modal.message}
+          taskName={modal.taskName}
+          type={modal.type}
+          duration={modal.duration}
+          onClose={removeModal}
+        />
       )}
     </div>
   )

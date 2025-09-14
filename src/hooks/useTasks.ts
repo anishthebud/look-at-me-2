@@ -266,20 +266,46 @@ export const useTasks = (): UseTasksReturn => {
           error: 'Failed to create tabs'
         }
       }
+      
+      console.log('Successfully created tabs for task:', task.name, 'Tabs:', tabs.length)
 
-      // Create tab group
+      // Try to create tab group using chrome.tabs.group (more stable approach)
       const tabIds = tabs.map(tab => tab.id).filter((id): id is number => id !== undefined)
-      const tabGroup = await chromeTabGroups.create({
-        tabIds,
-        title: task.name,
-        color: chromeTabGroups.getRandomColor()
-      })
-
-      if (!tabGroup) {
-        return {
-          success: false,
-          error: 'Failed to create tab group'
-        }
+      let groupId: number | null = null
+      
+      try {
+        // Step 1: Group the tabs using chrome.tabs.group
+        groupId = await new Promise<number>((resolve, reject) => {
+          chrome.tabs.group({ tabIds }, (groupId) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve(groupId)
+            }
+          })
+        })
+        
+        console.log('Tab group created with ID:', groupId)
+        
+        // Step 2: Update the group properties using chrome.tabGroups.update
+        await new Promise<void>((resolve, reject) => {
+          chrome.tabGroups.update(groupId!, {
+            title: task.name,
+            color: chromeTabGroups.getRandomColor() as any
+          }, () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve()
+            }
+          })
+        })
+        
+        console.log('Tab group updated with title and color')
+        
+      } catch (error) {
+        console.log('Tab group creation failed, continuing without grouping:', error)
+        // Continue without tab group - this is not a critical failure
       }
 
       // Update task state
@@ -294,7 +320,16 @@ export const useTasks = (): UseTasksReturn => {
         }
       }
 
+      // Reload tasks to get updated state
       await loadTasks()
+      
+      // Get the updated task and log it
+      const updatedTasks = await taskStorage.getTasks()
+      const updatedTask = updatedTasks.find(t => t.id === taskId)
+      console.log('Task after start operation completed:', updatedTask)
+      console.log('Tabs created:', tabs)
+      console.log('Tab group ID:', groupId)
+      
       return { success: true }
     } catch (error) {
       console.error('Error starting task:', error)
@@ -327,6 +362,29 @@ export const useTasks = (): UseTasksReturn => {
         }
       }
 
+      console.log('Starting task completion for:', task.name)
+
+      // Try to find and close the associated tab group
+      let tabGroupClosed = false
+      try {
+        const tabGroup = await chromeTabGroups.findByTitle(task.name)
+        if (tabGroup) {
+          console.log('Found tab group for task:', tabGroup.id)
+          const closed = await chromeTabGroups.remove(tabGroup.id)
+          if (closed) {
+            console.log('Tab group closed successfully:', tabGroup.id)
+            tabGroupClosed = true
+          } else {
+            console.log('Failed to close tab group:', tabGroup.id)
+          }
+        } else {
+          console.log('No tab group found for task:', task.name)
+        }
+      } catch (error) {
+        console.log('Error closing tab group:', error)
+        // Continue with task completion even if tab group closure fails
+      }
+
       // Update task state to completed
       const success = await taskStorage.updateTask(taskId, {
         state: TaskState.COMPLETED,
@@ -339,6 +397,14 @@ export const useTasks = (): UseTasksReturn => {
           error: 'Failed to update task state'
         }
       }
+
+      // Log completion details
+      console.log('Task completed successfully:', {
+        taskId: task.id,
+        taskName: task.name,
+        completedAt: new Date().toISOString(),
+        tabGroupClosed
+      })
 
       await loadTasks()
       return { success: true }

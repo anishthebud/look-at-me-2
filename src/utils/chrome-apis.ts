@@ -106,8 +106,9 @@ export const chromeTabGroups = {
     collapsed?: boolean
   } = {}): Promise<any> => {
     return new Promise((resolve) => {
+      // Check if tab groups API is available
       if (!chrome.tabGroups) {
-        console.error('Chrome tab groups API not available')
+        console.log('Chrome tab groups API not available - feature not supported in this Chrome version')
         resolve(null)
         return
       }
@@ -116,16 +117,17 @@ export const chromeTabGroups = {
       const tabGroupsApi = chrome.tabGroups as any
       
       if (!tabGroupsApi.create) {
-        console.error('Chrome tab groups create API not available')
+        console.log('Chrome tab groups create API not available - feature not supported in this Chrome version')
         resolve(null)
         return
       }
       
       tabGroupsApi.create(options, (group: any) => {
         if (chrome.runtime.lastError) {
-          console.error('Chrome tab groups create error:', chrome.runtime.lastError)
+          console.log('Chrome tab groups create error (non-critical):', chrome.runtime.lastError.message)
           resolve(null)
         } else {
+          console.log('Tab group created successfully:', group)
           resolve(group)
         }
       })
@@ -212,6 +214,69 @@ export const chromeTabGroups = {
   getRandomColor: (): string => {
     const randomIndex = Math.floor(Math.random() * TAB_GROUP_COLORS.length)
     return TAB_GROUP_COLORS[randomIndex]
+  },
+
+  /**
+   * Create tab group using chrome.tabs.group (more stable alternative)
+   */
+  createWithTabsGroup: async (tabIds: number[], title: string, color?: string): Promise<{ id: number; title: string } | null> => {
+    return new Promise((resolve) => {
+      try {
+        // Step 1: Group the tabs using chrome.tabs.group
+        chrome.tabs.group({ tabIds }, (groupId) => {
+          if (chrome.runtime.lastError) {
+            console.log('Chrome tabs.group error:', chrome.runtime.lastError.message)
+            resolve(null)
+            return
+          }
+
+          // Step 2: Update the group properties using chrome.tabGroups.update
+          chrome.tabGroups.update(groupId, {
+            title,
+            color: (color || chromeTabGroups.getRandomColor()) as any
+          }, () => {
+            if (chrome.runtime.lastError) {
+              console.log('Chrome tabGroups.update error:', chrome.runtime.lastError.message)
+              resolve(null)
+            } else {
+              console.log('Tab group created successfully with chrome.tabs.group:', groupId)
+              resolve({ id: groupId, title })
+            }
+          })
+        })
+      } catch (error) {
+        console.log('Tab group creation failed:', error)
+        resolve(null)
+      }
+    })
+  },
+
+  /**
+   * Find tab group by title (used to find groups associated with tasks)
+   */
+  findByTitle: async (title: string): Promise<{ id: number; title: string } | null> => {
+    return new Promise((resolve) => {
+      if (!chrome.tabGroups) {
+        console.log('Chrome tab groups API not available')
+        resolve(null)
+        return
+      }
+
+      chrome.tabGroups.query({}, (groups) => {
+        if (chrome.runtime.lastError) {
+          console.log('Chrome tab groups query error:', chrome.runtime.lastError.message)
+          resolve(null)
+          return
+        }
+
+        const matchingGroup = groups.find(group => group.title === title)
+        if (matchingGroup) {
+          resolve({ id: matchingGroup.id, title: matchingGroup.title || '' })
+        } else {
+          resolve(null)
+        }
+      })
+    })
   }
 }
 
