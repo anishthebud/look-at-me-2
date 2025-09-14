@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Task, TaskState, UpdateTaskData, TaskSchedule } from '../types'
 import { useTasks } from '../hooks/useTasks'
 import { TaskCard } from './TaskCard'
@@ -8,11 +8,19 @@ import { parseWebsitesString } from '../utils/validation'
 import { useToast } from '../hooks/useToast'
 import Toast from './Toast'
 
-export interface TaskListProps {
-  className?: string
+interface CompletionModalData {
+  taskName: string
+  message: string
+  type: 'success' | 'error' | 'info'
+  timestamp: number
 }
 
-export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
+interface TaskListProps {
+  className?: string
+  initialCompletionModal?: CompletionModalData | null
+}
+
+export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompletionModal = null }) => {
   const {
     tasks,
     currentPage,
@@ -35,6 +43,13 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const formResetRef = useRef<(() => void) | null>(null)
+
+  // Show initial completion modal if provided from popup
+  useEffect(() => {
+    if (initialCompletionModal) {
+      showSuccessModal(initialCompletionModal.taskName, initialCompletionModal.message)
+    }
+  }, [initialCompletionModal, showSuccessModal])
 
   // Get tasks for current page
   const startIndex = (currentPage - 1) * 8 // VISIBLE_TASKS

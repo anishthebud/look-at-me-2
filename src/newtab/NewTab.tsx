@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react'
 import { TaskList } from '../components/TaskList'
 import './NewTab.css'
 
+interface CompletionModalData {
+  taskName: string
+  message: string
+  type: 'success' | 'error' | 'info'
+  timestamp: number
+}
+
 export const NewTab = () => {
   const getTime = () => {
     const date = new Date()
@@ -22,6 +29,7 @@ export const NewTab = () => {
 
   const [time, setTime] = useState(getTime())
   const [date, setDate] = useState(getDate())
+  const [completionModalData, setCompletionModalData] = useState<CompletionModalData | null>(null)
 
   useEffect(() => {
     let intervalId = setInterval(() => {
@@ -32,6 +40,17 @@ export const NewTab = () => {
     return () => {
       clearInterval(intervalId)
     }
+  }, [])
+
+  // Check for completion modal data from popup
+  useEffect(() => {
+    chrome.storage.local.get(['showCompletionModal'], (result) => {
+      if (result.showCompletionModal) {
+        setCompletionModalData(result.showCompletionModal)
+        // Clear the data after reading it
+        chrome.storage.local.remove(['showCompletionModal'])
+      }
+    })
   }, [])
 
   return (
@@ -46,7 +65,10 @@ export const NewTab = () => {
 
       {/* Main content area */}
       <main className="new-tab-main">
-        <TaskList className="task-list-container" />
+        <TaskList 
+          className="task-list-container" 
+          initialCompletionModal={completionModalData}
+        />
       </main>
 
       {/* Footer */}
