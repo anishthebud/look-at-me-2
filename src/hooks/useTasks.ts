@@ -3,9 +3,11 @@ import { Task, TaskState, CreateTaskData, UpdateTaskData, TaskListState } from '
 import { taskStorage, chromeTabs, chromeTabGroups } from '../utils/chrome-apis'
 import { MAX_TASKS_PER_DAY, VISIBLE_TASKS } from '../utils/constants'
 import { validateTask } from '../utils/validation'
+import { isToday, isFutureDate } from '../utils/dateUtils'
 
 export interface UseTasksReturn {
   tasks: Task[]
+  futureTasks: Task[]
   currentPage: number
   totalPages: number
   isLoading: boolean
@@ -24,8 +26,9 @@ export interface UseTasksReturn {
  * Custom hook for managing tasks
  */
 export const useTasks = (): UseTasksReturn => {
-  const [state, setState] = useState<TaskListState>({
+  const [state, setState] = useState<TaskListState & { futureTasks: Task[] }>({
     tasks: [],
+    futureTasks: [],
     currentPage: 1,
     totalPages: 1,
     isLoading: true,
@@ -43,15 +46,28 @@ export const useTasks = (): UseTasksReturn => {
       console.log('Loaded tasks from storage:', tasks) // Debug log
       
       // Filter out completed tasks for display (keep them for history)
-      const visibleTasks = tasks.filter(task => task.state !== TaskState.COMPLETED)
+      const activeTasks = tasks.filter(task => task.state !== TaskState.COMPLETED)
       
-      // Calculate pagination
-      const totalPages = Math.max(1, Math.ceil(visibleTasks.length / VISIBLE_TASKS))
+      // Filter tasks for today's display: today's tasks and tasks with no start date
+      const todaysTasks = activeTasks.filter(task => {
+        if (!task.startDate) return true // Tasks with no start date are always shown
+        return isToday(task.startDate)
+      })
+      
+      // Filter future tasks for the modal
+      const futureTasks = activeTasks.filter(task => {
+        if (!task.startDate) return false // Tasks with no start date are not future tasks
+        return isFutureDate(task.startDate)
+      })
+      
+      // Calculate pagination for today's tasks
+      const totalPages = Math.max(1, Math.ceil(todaysTasks.length / VISIBLE_TASKS))
       const currentPage = Math.min(state.currentPage, totalPages)
       
       setState(prev => ({
         ...prev,
-        tasks: visibleTasks,
+        tasks: todaysTasks,
+        futureTasks: futureTasks,
         currentPage,
         totalPages,
         isLoading: false
@@ -553,6 +569,7 @@ export const useTasks = (): UseTasksReturn => {
 
   return {
     tasks: state.tasks,
+    futureTasks: state.futureTasks,
     currentPage: state.currentPage,
     totalPages: state.totalPages,
     isLoading: state.isLoading,

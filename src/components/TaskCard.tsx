@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Task, TaskState, TaskSchedule } from '../types'
-import { formatDateString, stringToDate } from '../utils/dateUtils'
+import { formatDateString, stringToDate, parseDateStringToLocalDate, formatDateForInput } from '../utils/dateUtils'
 
 export interface TaskCardProps {
   task: Task
@@ -80,20 +80,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   }
 
-  const getStateText = (state: TaskState): string => {
-    switch (state) {
-      case TaskState.PENDING:
-        return 'Ready'
-      case TaskState.IN_PROGRESS:
-        return 'In Progress'
-      case TaskState.COMPLETED:
-        return 'Completed'
-      case TaskState.RECURRING:
-        return 'Recurring'
-      default:
-        return 'Unknown'
-    }
-  }
 
   const getScheduleText = (schedule: TaskSchedule): string => {
     switch (schedule) {
@@ -193,8 +179,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </label>
             <input
               type="date"
-              value={editData.startDate ? editData.startDate.toISOString().split('T')[0] : ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, startDate: e.target.value ? new Date(e.target.value) : null }))}
+              value={formatDateForInput(editData.startDate)}
+              onChange={(e) => setEditData(prev => ({ 
+                ...prev, 
+                startDate: e.target.value ? parseDateStringToLocalDate(e.target.value) : null 
+              }))}
               onClick={(e) => {
                 if ('showPicker' in e.target) {
                   (e.target as any).showPicker()
@@ -240,18 +229,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   return (
     <div className={`task-card border-2 rounded-lg shadow-sm hover:shadow-md transition-shadow ${getStateColor(task.state)}`}>
       <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-800 truncate pr-2">
+        <div className="mb-2">
+          <h3 className="text-lg font-semibold text-gray-800">
             {task.name}
           </h3>
-          <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
-            task.state === TaskState.PENDING ? 'bg-gray-200 text-gray-700' :
-            task.state === TaskState.IN_PROGRESS ? 'bg-blue-200 text-blue-700' :
-            task.state === TaskState.COMPLETED ? 'bg-green-200 text-green-700' :
-            'bg-purple-200 text-purple-700'
-          }`}>
-            {getStateText(task.state)}
-          </span>
         </div>
         
         {task.description && (

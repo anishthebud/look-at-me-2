@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { CreateTaskData, TaskFormData, TaskSchedule } from '../types'
 import { parseWebsitesString, validateTask, isValidUrl } from '../utils/validation'
-import { stringToDate, dateToString } from '../utils/dateUtils'
+import { stringToDate, dateToString, parseDateStringToLocalDate, formatDateForInput } from '../utils/dateUtils'
 
 export interface TaskFormProps {
   onSubmit: (taskData: CreateTaskData) => Promise<{ success: boolean; error?: string }>
@@ -159,8 +159,10 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       
       // Handle startDate conversion from string to Date
       if (field === 'startDate' && typeof value === 'string') {
-        processedValue = value ? new Date(value) : null
+        processedValue = value ? parseDateStringToLocalDate(value) : null
       }
+
+      console.log('Processed value:', processedValue);
       
       const newData = { ...prev, [field]: processedValue }
       console.log('Updated form data:', newData) // Debug log
@@ -306,7 +308,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           <input
             type="date"
             id="task-start-date"
-            value={formData.startDate ? formData.startDate.toISOString().split('T')[0] : ''}
+            value={formatDateForInput(formData.startDate)}
             onChange={(e) => handleInputChange('startDate', e.target.value)}
             onClick={(e) => {
               if (!isSubmitting && 'showPicker' in e.target) {

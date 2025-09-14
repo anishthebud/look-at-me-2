@@ -218,6 +218,8 @@ src/
 - **Task Limits**: Maximum 12 tasks per day, 8 visible at once
 - **Task Navigation**: Arrow buttons to navigate through task pages
 - **Task States**: Use enum/union types for state management
+- **Task Filtering**: Only show today's tasks and unscheduled tasks in main view
+- **Future Tasks**: Access future scheduled tasks via modal button
 
 ### Task Operations
 - **Create Task**: Form validation, URL validation, save to storage

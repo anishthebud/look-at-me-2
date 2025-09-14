@@ -3,6 +3,7 @@ import { Task, TaskState, UpdateTaskData, TaskSchedule } from '../types'
 import { useTasks } from '../hooks/useTasks'
 import { TaskCard } from './TaskCard'
 import { TaskForm } from './TaskForm'
+import { FutureTasksModal } from './FutureTasksModal'
 import { CreateTaskData, TaskFormData } from '../types'
 import { parseWebsitesString } from '../utils/validation'
 import { useToast } from '../hooks/useToast'
@@ -23,6 +24,7 @@ interface TaskListProps {
 export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompletionModal = null }) => {
   const {
     tasks,
+    futureTasks,
     currentPage,
     totalPages,
     isLoading,
@@ -40,6 +42,7 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
   const { modal, removeModal, showSuccessModal, showErrorModal } = useToast()
 
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showFutureTasksModal, setShowFutureTasksModal] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const formResetRef = useRef<(() => void) | null>(null)
@@ -214,17 +217,33 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
           <h1 className="text-2xl font-bold text-gray-800">My Tasks</h1>
           <p className="text-gray-600">
             {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} • Page {currentPage} of {totalPages}
+            {futureTasks.length > 0 && (
+              <span className="ml-2 text-orange-600">
+                • {futureTasks.length} future scheduled
+              </span>
+            )}
           </p>
         </div>
         
-        {!showCreateForm && (
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            + New Task
-          </button>
-        )}
+        <div className="flex gap-2">
+          {futureTasks.length > 0 && !showCreateForm && (
+            <button
+              onClick={() => setShowFutureTasksModal(true)}
+              className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              📅 Future Tasks ({futureTasks.length})
+            </button>
+          )}
+          
+          {!showCreateForm && (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              + New Task
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Action Error */}
@@ -346,6 +365,16 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
           onClose={removeModal}
         />
       )}
+
+      {/* Future Tasks Modal */}
+      <FutureTasksModal
+        isOpen={showFutureTasksModal}
+        onClose={() => setShowFutureTasksModal(false)}
+        tasks={futureTasks}
+        onStart={handleStartTask}
+        onEdit={handleEdit}
+        onDelete={handleDeleteTask}
+      />
     </div>
   )
 }
