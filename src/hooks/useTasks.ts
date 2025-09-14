@@ -99,11 +99,15 @@ export const useTasks = (): UseTasksReturn => {
         description: taskData.description?.trim() || undefined,
         websites: taskData.websites.map(url => url.trim()),
         state: TaskState.PENDING,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        schedule: taskData.schedule,
+        startDate: taskData.startDate?.toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         order: currentTasks.length
       }
 
+      console.log('Created new task:', newTask) // Debug log
+      
       const success = await taskStorage.addTask(newTask)
       if (!success) {
         return {
@@ -162,7 +166,15 @@ export const useTasks = (): UseTasksReturn => {
         }
       }
 
-      const success = await taskStorage.updateTask(taskId, updates)
+      // Convert Date objects to strings for storage
+      const storageUpdates: Partial<Task> = {
+        ...updates,
+        startDate: updates.startDate ? 
+          (typeof updates.startDate === 'string' ? updates.startDate : updates.startDate.toISOString()) : 
+          updates.startDate
+      }
+
+      const success = await taskStorage.updateTask(taskId, storageUpdates)
       if (!success) {
         return {
           success: false,
@@ -318,7 +330,7 @@ export const useTasks = (): UseTasksReturn => {
       // Update task state to completed
       const success = await taskStorage.updateTask(taskId, {
         state: TaskState.COMPLETED,
-        completedAt: new Date()
+        completedAt: new Date().toISOString()
       })
 
       if (!success) {

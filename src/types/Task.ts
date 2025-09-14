@@ -5,15 +5,24 @@ export enum TaskState {
   RECURRING = 'recurring'
 }
 
+export enum TaskSchedule {
+  NONE = 'none',
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly'
+}
+
 export interface Task {
   id: string
   name: string
   description?: string
   websites: string[]
   state: TaskState
-  createdAt: Date | string
-  updatedAt: Date | string
-  completedAt?: Date | string
+  schedule: TaskSchedule
+  startDate?: string  // Always stored as ISO string
+  createdAt: string   // Always stored as ISO string
+  updatedAt: string   // Always stored as ISO string
+  completedAt?: string // Always stored as ISO string
   order: number
 }
 
@@ -21,6 +30,8 @@ export interface CreateTaskData {
   name: string
   description?: string
   websites: string[]
+  schedule: TaskSchedule
+  startDate?: Date  // Accept Date for input, will be converted to string
 }
 
 export interface UpdateTaskData {
@@ -28,6 +39,8 @@ export interface UpdateTaskData {
   description?: string
   websites?: string[]
   state?: TaskState
+  schedule?: TaskSchedule
+  startDate?: Date | string  // Accept both for flexibility
   order?: number
 }
 
@@ -35,6 +48,8 @@ export interface TaskFormData {
   name: string
   description: string
   websites: string
+  schedule: TaskSchedule
+  startDate: Date | null
 }
 
 export interface TaskListState {

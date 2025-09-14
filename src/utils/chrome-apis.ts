@@ -257,7 +257,7 @@ export const taskStorage = {
     tasks[taskIndex] = {
       ...tasks[taskIndex],
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date().toISOString()
     }
     
     return taskStorage.saveTasks(tasks)

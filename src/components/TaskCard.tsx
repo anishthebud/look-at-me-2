@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Task, TaskState } from '../types'
+import { Task, TaskState, TaskSchedule } from '../types'
+import { formatDateString, stringToDate } from '../utils/dateUtils'
 
 export interface TaskCardProps {
   task: Task
@@ -8,7 +9,7 @@ export interface TaskCardProps {
   onEdit: (taskId: string) => void
   onDelete: (taskId: string) => void
   isEditing?: boolean
-  onEditSubmit?: (taskId: string, updates: { name: string; description: string; websites: string }) => void
+  onEditSubmit?: (taskId: string, updates: { name: string; description: string; websites: string; schedule: TaskSchedule; startDate: Date | null }) => void
   onEditCancel?: () => void
 }
 
@@ -25,7 +26,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [editData, setEditData] = useState({
     name: task.name,
     description: task.description || '',
-    websites: task.websites.join('\n')
+    websites: task.websites.join('\n'),
+    schedule: task.schedule,
+    startDate: task.startDate ? stringToDate(task.startDate) : null
   })
 
   const handleEditSubmit = (): void => {
@@ -38,7 +41,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     setEditData({
       name: task.name,
       description: task.description || '',
-      websites: task.websites.join('\n')
+      websites: task.websites.join('\n'),
+      schedule: task.schedule,
+      startDate: task.startDate ? (typeof task.startDate === 'string' ? new Date(task.startDate) : task.startDate) : null
     })
     if (onEditCancel) {
       onEditCancel()
@@ -51,7 +56,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       setEditData({
         name: task.name,
         description: task.description || '',
-        websites: task.websites.join('\n')
+        websites: task.websites.join('\n'),
+        schedule: task.schedule,
+        startDate: task.startDate ? stringToDate(task.startDate) : null
       })
     }
   }, [isEditing, task.id])
@@ -86,24 +93,48 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   }
 
-  const formatDate = (date: Date | string): string => {
+  const getScheduleText = (schedule: TaskSchedule): string => {
+    switch (schedule) {
+      case TaskSchedule.NONE:
+        return 'None'
+      case TaskSchedule.DAILY:
+        return 'Daily'
+      case TaskSchedule.WEEKLY:
+        return 'Weekly'
+      case TaskSchedule.MONTHLY:
+        return 'Monthly'
+      default:
+        return 'Unknown'
+    }
+  }
+
+  const formatStartDate = (startDateString: string): string => {
     try {
-      // Convert string to Date if needed
-      const dateObj = typeof date === 'string' ? new Date(date) : date
-      
-      // Check if date is valid
-      if (isNaN(dateObj.getTime())) {
-        return 'Invalid date'
-      }
+      const date = stringToDate(startDateString)
+      if (!date) return 'Invalid date'
+      return new Intl.DateTimeFormat('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      }).format(date)
+    } catch (error) {
+      return 'Invalid date'
+    }
+  }
+
+  const formatDate = (dateString: string): string => {
+    try {
+      const date = stringToDate(dateString)
+      if (!date) return 'Invalid date'
       
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
-      }).format(dateObj)
+      }).format(date)
     } catch (error) {
-      console.error('Error formatting date:', error, 'Date value:', date)
+      console.error('Error formatting date:', error, 'Date value:', dateString)
       return 'Invalid date'
     }
   }
@@ -135,6 +166,40 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter task description (optional)"
               rows={2}
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Recurrence
+            </label>
+            <select
+              value={editData.schedule}
+              onChange={(e) => setEditData(prev => ({ ...prev, schedule: e.target.value as TaskSchedule }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={TaskSchedule.NONE}>None</option>
+              <option value={TaskSchedule.DAILY}>Daily</option>
+              <option value={TaskSchedule.WEEKLY}>Weekly</option>
+              <option value={TaskSchedule.MONTHLY}>Monthly</option>
+            </select>
+          </div>
+          
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={editData.startDate ? editData.startDate.toISOString().split('T')[0] : ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, startDate: e.target.value ? new Date(e.target.value) : null }))}
+              onClick={(e) => {
+                if ('showPicker' in e.target) {
+                  (e.target as any).showPicker()
+                }
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              min={new Date().toISOString().split('T')[0]}
             />
           </div>
           
@@ -194,6 +259,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         )}
         
         <div className="mb-3">
+          <p className="text-xs text-gray-500 mb-1">Recurrence:</p>
+          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+            {getScheduleText(task.schedule)}
+          </span>
+        </div>
+        
+        {task.startDate && (
+          <div className="mb-3">
+            <p className="text-xs text-gray-500 mb-1">Starts:</p>
+            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+              {formatStartDate(task.startDate)}
+            </span>
+          </div>
+        )}
+        
+        <div className="mb-3">
           <p className="text-xs text-gray-500 mb-1">Websites ({task.websites.length}):</p>
           <div className="flex flex-wrap gap-1">
             {task.websites.slice(0, 3).map((website, index) => (
@@ -212,14 +293,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             )}
           </div>
         </div>
-        
-        <div className="text-xs text-gray-500 mb-3">
-          Created: {formatDate(task.createdAt)}
-          {task.completedAt && (
-            <span className="block">Completed: {formatDate(task.completedAt)}</span>
-          )}
-        </div>
-        
         <div className="flex gap-2">
           {task.state === TaskState.PENDING && (
             <>

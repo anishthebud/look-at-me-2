@@ -184,12 +184,45 @@ export const validateTaskWebsites = (websites: string[]): ValidationError[] => {
 }
 
 /**
+ * Validates task start date
+ */
+export const validateTaskStartDate = (startDate: Date, schedule: string): ValidationError[] => {
+  const errors: ValidationError[] = []
+  
+  // Start date is required for recurring tasks (not 'none')
+  if (schedule !== 'none' && !startDate) {
+    errors.push({
+      field: 'startDate',
+      message: 'Start date is required for recurring tasks'
+    })
+    return errors
+  }
+  
+  // If start date is provided, validate it
+  if (startDate) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Reset time to start of day
+    
+    if (startDate < today) {
+      errors.push({
+        field: 'startDate',
+        message: 'Start date cannot be in the past'
+      })
+    }
+  }
+  
+  return errors
+}
+
+/**
  * Validates a complete task
  */
 export const validateTask = (taskData: {
   name: string
   description?: string
   websites: string[]
+  schedule?: string
+  startDate?: Date
 }): ValidationResult => {
   const errors: ValidationError[] = []
   
@@ -200,6 +233,13 @@ export const validateTask = (taskData: {
   }
   
   errors.push(...validateTaskWebsites(taskData.websites))
+  
+  if (taskData.startDate) {
+    errors.push(...validateTaskStartDate(taskData.startDate, taskData.schedule || 'none'))
+  } else if (taskData.schedule && taskData.schedule !== 'none') {
+    // For recurring tasks without start date, add validation error
+    errors.push(...validateTaskStartDate(new Date(), taskData.schedule))
+  }
   
   return {
     isValid: errors.length === 0,

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { Task, TaskState, UpdateTaskData } from '../types'
+import { Task, TaskState, UpdateTaskData, TaskSchedule } from '../types'
 import { useTasks } from '../hooks/useTasks'
 import { TaskCard } from './TaskCard'
 import { TaskForm } from './TaskForm'
@@ -55,14 +55,16 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
     return result
   }
 
-  const handleEditTask = async (taskId: string, updates: { name: string; description: string; websites: string }): Promise<void> => {
+  const handleEditTask = async (taskId: string, updates: { name: string; description: string; websites: string; schedule: TaskSchedule; startDate: Date | null }): Promise<void> => {
     setActionError(null)
     
     const websites = parseWebsitesString(updates.websites)
     const updateData: UpdateTaskData = {
       name: updates.name,
       description: updates.description || undefined,
-      websites
+      websites,
+      schedule: updates.schedule,
+      startDate: updates.startDate || undefined
     }
 
     const result = await updateTask(taskId, updateData)
@@ -208,18 +210,19 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
       )}
 
       {/* Create Task Form */}
-      <div className={`mb-6 flex justify-center ${showCreateForm ? '' : 'hidden'}`}>
-        <TaskForm
-          onSubmit={handleCreateTask}
-          onCancel={() => {
-            setShowCreateForm(false)
-            setActionError(null)
-          }}
-          onFormReady={(resetFn) => {
-            formResetRef.current = resetFn
-          }}
-        />
-      </div>
+             {showCreateForm && (
+               <TaskForm
+                 onSubmit={handleCreateTask}
+                 onCancel={() => {
+                   setShowCreateForm(false)
+                   setActionError(null)
+                 }}
+                 onFormReady={(resetFn) => {
+                   formResetRef.current = resetFn
+                 }}
+                 isOpen={showCreateForm}
+               />
+             )}
 
       {/* Tasks Grid */}
       {currentTasks.length > 0 ? (
