@@ -14,6 +14,7 @@ export interface UseTasksReturn {
   updateTask: (taskId: string, updates: UpdateTaskData) => Promise<{ success: boolean; error?: string }>
   deleteTask: (taskId: string) => Promise<{ success: boolean; error?: string }>
   startTask: (taskId: string) => Promise<{ success: boolean; error?: string }>
+  continueTask: (taskId: string) => Promise<{ success: boolean; error?: string }>
   completeTask: (taskId: string) => Promise<{ success: boolean; error?: string }>
   goToPage: (page: number) => void
   refreshTasks: () => Promise<void>
@@ -341,6 +342,117 @@ export const useTasks = (): UseTasksReturn => {
   }, [loadTasks])
 
   /**
+   * Continue a task (focus on existing tab group if it exists)
+   */
+  const continueTask = useCallback(async (taskId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const currentTasks = await taskStorage.getTasks()
+      const task = currentTasks.find(t => t.id === taskId)
+      
+      if (!task) {
+        return {
+          success: false,
+          error: 'Task not found'
+        }
+      }
+
+      if (task.state !== TaskState.IN_PROGRESS) {
+        return {
+          success: false,
+          error: 'Task is not in progress'
+        }
+      }
+
+      console.log('Continuing task:', task.name)
+
+      // Try to find and focus on the existing tab group, or create a new one
+      let tabGroupFocused = false
+      try {
+        const existingTabGroup = await chromeTabGroups.findByTitle(task.name)
+        if (existingTabGroup) {
+          console.log('Found existing tab group for task:', existingTabGroup.id)
+          const focused = await chromeTabGroups.focusGroup(existingTabGroup.id)
+          if (focused) {
+            console.log('Successfully focused on existing tab group:', existingTabGroup.id)
+            tabGroupFocused = true
+          } else {
+            console.log('Failed to focus on existing tab group:', existingTabGroup.id)
+          }
+        } else {
+          console.log('No existing tab group found for task:', task.name)
+          console.log('Creating new tab group for continue task...')
+          
+          // Create new tabs for the task websites
+          const tabs = await chromeTabs.createMultiple(task.websites)
+          if (tabs && tabs.length > 0) {
+            console.log('Created tabs for continue task:', tabs.length)
+            
+            // Create tab group with the new tabs
+            const tabIds = tabs.map(tab => tab.id).filter((id): id is number => id !== undefined)
+            let groupId: number | null = null
+
+            try {
+              // Step 1: Group the tabs using chrome.tabs.group
+              groupId = await new Promise<number>((resolve, reject) => {
+                chrome.tabs.group({ tabIds }, (groupId) => {
+                  if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message))
+                  } else {
+                    resolve(groupId)
+                  }
+                })
+              })
+
+              console.log('Tab group created for continue task with ID:', groupId)
+
+              // Step 2: Update the group properties using chrome.tabGroups.update
+              await new Promise<void>((resolve, reject) => {
+                chrome.tabGroups.update(groupId!, {
+                  title: task.name,
+                  color: chromeTabGroups.getRandomColor() as any
+                }, () => {
+                  if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message))
+                  } else {
+                    resolve()
+                  }
+                })
+              })
+
+              console.log('Tab group updated for continue task with title and color')
+              tabGroupFocused = true
+              
+            } catch (error) {
+              console.log('Tab group creation failed for continue task, continuing without grouping:', error)
+              // Continue without tab group - this is not a critical failure
+            }
+          } else {
+            console.log('Failed to create tabs for continue task')
+          }
+        }
+      } catch (error) {
+        console.log('Error with tab group operations for continue task:', error)
+        // Continue without focusing - this is not a critical failure
+      }
+
+      // Log continuation details
+      console.log('Task continuation completed:', {
+        taskId: task.id,
+        taskName: task.name,
+        tabGroupFocused
+      })
+
+      return { success: true }
+    } catch (error) {
+      console.error('Error continuing task:', error)
+      return {
+        success: false,
+        error: 'Failed to continue task'
+      }
+    }
+  }, [])
+
+  /**
    * Complete a task (close tab group and mark as completed)
    */
   const completeTask = useCallback(async (taskId: string): Promise<{ success: boolean; error?: string }> => {
@@ -449,6 +561,7 @@ export const useTasks = (): UseTasksReturn => {
     updateTask,
     deleteTask,
     startTask,
+    continueTask,
     completeTask,
     goToPage,
     refreshTasks

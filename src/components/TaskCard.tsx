@@ -5,6 +5,7 @@ import { formatDateString, stringToDate } from '../utils/dateUtils'
 export interface TaskCardProps {
   task: Task
   onStart: (taskId: string) => void
+  onContinue: (taskId: string) => void
   onComplete: (taskId: string) => void
   onEdit: (taskId: string) => void
   onDelete: (taskId: string) => void
@@ -16,6 +17,7 @@ export interface TaskCardProps {
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
   onStart,
+  onContinue,
   onComplete,
   onEdit,
   onDelete,
@@ -320,12 +322,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
           
           {task.state === TaskState.IN_PROGRESS && (
-            <button
-              onClick={() => onComplete(task.id)}
-              className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              Complete Task
-            </button>
+            <>
+              <button
+                onClick={() => onContinue(task.id)}
+                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Continue Task
+              </button>
+              <button
+                onClick={() => onComplete(task.id)}
+                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                Complete Task
+              </button>
+            </>
           )}
           
           {task.state === TaskState.COMPLETED && (

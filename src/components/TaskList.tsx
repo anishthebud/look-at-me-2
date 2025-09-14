@@ -23,6 +23,7 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
     updateTask,
     deleteTask,
     startTask,
+    continueTask,
     completeTask,
     goToPage,
     refreshTasks
@@ -101,6 +102,16 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
     if (!result.success) {
       setActionError(result.error || 'Failed to start task')
     }
+  }
+
+  const handleContinueTask = async (taskId: string): Promise<void> => {
+    setActionError(null)
+    const result = await continueTask(taskId)
+    
+    if (!result.success) {
+      setActionError(result.error || 'Failed to continue task')
+    }
+    // Note: No modal for continue task as it's a silent operation
   }
 
   const handleCompleteTask = async (taskId: string): Promise<void> => {
@@ -246,6 +257,7 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '' }) => {
               key={task.id}
               task={task}
               onStart={handleStartTask}
+              onContinue={handleContinueTask}
               onComplete={handleCompleteTask}
               onEdit={handleEdit}
               onDelete={handleDeleteTask}

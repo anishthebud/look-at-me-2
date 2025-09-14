@@ -277,6 +277,50 @@ export const chromeTabGroups = {
         }
       })
     })
+  },
+
+  /**
+   * Focus on an existing tab group (bring it to foreground)
+   */
+  focusGroup: async (groupId: number): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (!chrome.tabGroups) {
+        console.log('Chrome tab groups API not available')
+        resolve(false)
+        return
+      }
+
+      // First, get all tabs in the group
+      chrome.tabs.query({ groupId }, (tabs) => {
+        if (chrome.runtime.lastError) {
+          console.log('Chrome tabs query error:', chrome.runtime.lastError.message)
+          resolve(false)
+          return
+        }
+
+        if (tabs.length === 0) {
+          console.log('No tabs found in group:', groupId)
+          resolve(false)
+          return
+        }
+
+        // Focus on the first tab in the group
+        const firstTab = tabs[0]
+        if (firstTab.id) {
+          chrome.tabs.update(firstTab.id, { active: true }, (tab) => {
+            if (chrome.runtime.lastError) {
+              console.log('Chrome tabs update error:', chrome.runtime.lastError.message)
+              resolve(false)
+            } else {
+              console.log('Focused on tab group:', groupId)
+              resolve(true)
+            }
+          })
+        } else {
+          resolve(false)
+        }
+      })
+    })
   }
 }
 

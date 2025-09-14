@@ -224,6 +224,7 @@ src/
 - **Edit Task**: Only before task is started (pending state)
 - **Delete Task**: Only before task is started (pending state)
 - **Start Task**: Create tab group, open all websites, change to in-progress
+- **Continue Task**: For in-progress tasks, find existing tab group and focus it, or create new tab group if none exists
 - **Complete Task**: Manual completion only, close tab group, show toast
 - **Recurring Tasks**: Handle daily reset and recurring logic
 
