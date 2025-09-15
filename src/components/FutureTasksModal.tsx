@@ -132,7 +132,7 @@ export const FutureTasksModal: React.FC<FutureTasksModalProps> = ({
                     <th className="pb-3 px-4 text-center text-gray-300 font-semibold text-sm border-r border-gray-600">Task Name</th>
                     <th className="pb-3 px-4 text-center text-gray-300 font-semibold text-sm border-r border-gray-600">Description</th>
                     <th className="pb-3 px-4 text-center text-gray-300 font-semibold text-sm border-r border-gray-600">Scheduled Date</th>
-                    <th className="pb-3 px-4 text-center text-gray-300 font-semibold text-sm border-r border-gray-600"></th>
+                    <th className="pb-3 px-4 text-center text-gray-300 font-semibold text-sm border-r border-gray-600">Recurrence</th>
                     <th className="pb-3 px-4 text-center text-gray-300 font-semibold text-sm border-r border-gray-600">Websites</th>
                     <th className="pb-3 px-4 text-center text-gray-300 font-semibold text-sm">Actions</th>
                   </tr>
@@ -159,7 +159,7 @@ export const FutureTasksModal: React.FC<FutureTasksModalProps> = ({
                       </td>
                       <td className="py-3 px-4 text-center border-r border-gray-600">
                         <span className="px-2 py-1 bg-blue-500 bg-opacity-20 text-blue-300 text-xs rounded border border-blue-500 border-opacity-30">
-                          📅 {getScheduleText(task.schedule)}
+                          {getScheduleText(task.schedule)}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-center border-r border-gray-600">
