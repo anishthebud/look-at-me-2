@@ -193,11 +193,21 @@ export const Popup = () => {
         <div className="tasks-container">
           {displayTasks
             .sort((a, b) => {
-              // Put current task first
+              // Put current task first (highest priority)
               if (currentTask) {
                 if (a.id === currentTask.id) return -1
                 if (b.id === currentTask.id) return 1
               }
+
+              // Then prioritize in-progress tasks over pending tasks
+              if (a.state === TaskState.IN_PROGRESS && b.state === TaskState.PENDING) return -1
+              if (a.state === TaskState.PENDING && b.state === TaskState.IN_PROGRESS) return 1
+
+              // For tasks of the same state, maintain original order (by creation time)
+              if (a.createdAt && b.createdAt) {
+                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              }
+
               return 0
             })
             .slice(0, 5)

@@ -72,13 +72,23 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
     }
   }, [showCreateForm, showEditForm, onCreateFormToggle])
 
-  // Get tasks for current page, sorted with current task first
+  // Get tasks for current page, sorted with in-progress tasks first
   const sortedTasks = tasks.sort((a, b) => {
-    // Put current task first
+    // Put current task first (highest priority)
     if (currentTask) {
       if (a.id === currentTask.id) return -1
       if (b.id === currentTask.id) return 1
     }
+
+    // Then prioritize in-progress tasks over pending tasks
+    if (a.state === TaskState.IN_PROGRESS && b.state === TaskState.PENDING) return -1
+    if (a.state === TaskState.PENDING && b.state === TaskState.IN_PROGRESS) return 1
+
+    // For tasks of the same state, maintain original order (by creation time or order field)
+    if (a.createdAt && b.createdAt) {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    }
+
     return 0
   })
   
