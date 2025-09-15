@@ -51,13 +51,13 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
   const getModalStyles = () => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 border-green-200 text-green-800'
+        return 'glass border-green-500 text-green-300'
       case 'error':
-        return 'bg-red-50 border-red-200 text-red-800'
+        return 'glass border-red-500 text-red-300'
       case 'info':
-        return 'bg-blue-50 border-blue-200 text-blue-800'
+        return 'glass border-blue-500 text-blue-300'
       default:
-        return 'bg-green-50 border-green-200 text-green-800'
+        return 'glass border-green-500 text-green-300'
     }
   }
 
@@ -65,24 +65,24 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
     switch (type) {
       case 'success':
         return (
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-            <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-500 bg-opacity-20 border border-green-500 border-opacity-30">
+            <svg className="h-8 w-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
         )
       case 'error':
         return (
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-            <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-500 bg-opacity-20 border border-red-500 border-opacity-30">
+            <svg className="h-8 w-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
         )
       case 'info':
         return (
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-            <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-500 bg-opacity-20 border border-blue-500 border-opacity-30">
+            <svg className="h-8 w-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -107,58 +107,50 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[10000] overflow-y-auto"
+      className="fixed inset-0 z-[10000] overflow-y-auto backdrop-blur-lg"
       style={{ 
         position: 'fixed', 
         top: 0, 
         left: 0, 
         right: 0, 
-        bottom: 0,
-        backdropFilter: 'blur(2px)'
+        bottom: 0
       }}
       onClick={handleBackdropClick}
     >
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div 
-          className={`relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg ${getModalStyles()} ${
+          className={`relative transform overflow-hidden rounded-2xl px-6 pb-6 pt-6 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg ${getModalStyles()} ${
             isExiting ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
           }`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
         >
-          <div className="sm:flex sm:items-start">
+          <div className="sm:flex sm:items-start bg-green-500">
             <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-              <div className="flex justify-center mb-4">
+              <div className="flex justify-center mb-6">
                 {getIcon()}
               </div>
               
-              <h3 className="text-base font-semibold leading-6 text-gray-900 mb-2" id="modal-title">
+              <h3 className="text-xl font-bold leading-6 text-white mb-3" id="modal-title">
                 {getTitle()}
               </h3>
               
               <div className="mt-2">
-                <p className="text-sm text-gray-500">
-                  <span className="font-semibold text-gray-900">"{taskName}"</span> {message}
+                <p className="text-base text-gray-300">
+                  <span className="font-semibold text-white">"{taskName}"</span> {message}
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+          <div className="mt-6 sm:mt-6 sm:flex sm:flex-row-reverse gap-3">
             <button
               type="button"
-              className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto"
+              className="inline-flex w-full justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 sm:ml-3 sm:w-auto transition-all duration-200"
               onClick={handleClose}
             >
               Great!
-            </button>
-            <button
-              type="button"
-              className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-              onClick={handleClose}
-            >
-              Close
             </button>
           </div>
         </div>

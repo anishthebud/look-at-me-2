@@ -3,7 +3,62 @@ import { Task, TaskState, CreateTaskData, UpdateTaskData, TaskListState } from '
 import { taskStorage, chromeTabs, chromeTabGroups } from '../utils/chrome-apis'
 import { MAX_TASKS_PER_DAY, VISIBLE_TASKS } from '../utils/constants'
 import { validateTask } from '../utils/validation'
-import { isToday, isFutureDate } from '../utils/dateUtils'
+import { isToday, isFutureDate, parseDateStringToLocalDate } from '../utils/dateUtils'
+
+/**
+ * Generate next occurrences for recurring tasks
+ */
+const generateNextOccurrences = (task: Task): Task[] => {
+  if (task.schedule === 'none' || !task.startDate) {
+    return []
+  }
+
+  const occurrences: Task[] = []
+  const startDate = parseDateStringToLocalDate(task.startDate)
+  
+  // Return empty array if startDate is null or invalid
+  if (!startDate) {
+    return []
+  }
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  // Generate next 5 occurrences
+  for (let i = 1; i <= 5; i++) {
+    const nextDate = new Date(startDate)
+    
+    switch (task.schedule) {
+      case 'daily':
+        nextDate.setDate(startDate.getDate() + i)
+        break
+      case 'weekly':
+        nextDate.setDate(startDate.getDate() + (i * 7))
+        break
+      case 'monthly':
+        nextDate.setMonth(startDate.getMonth() + i)
+        break
+      default:
+        continue
+    }
+
+    // Only include future dates
+    if (nextDate > today) {
+      const occurrence: Task = {
+        ...task,
+        id: `${task.id}_occurrence_${i}`,
+        startDate: nextDate.toISOString().split('T')[0],
+        state: TaskState.PENDING,
+        createdAt: task.createdAt,
+        updatedAt: new Date().toISOString(),
+        order: task.order + i
+      }
+      occurrences.push(occurrence)
+    }
+  }
+
+  return occurrences
+}
 
 export interface UseTasksReturn {
   tasks: Task[]
@@ -59,6 +114,22 @@ export const useTasks = (): UseTasksReturn => {
         if (!task.startDate) return false // Tasks with no start date are not future tasks
         return isFutureDate(task.startDate)
       })
+
+      // Add recurring task occurrences to future tasks
+      const recurringOccurrences: Task[] = []
+      activeTasks.forEach(task => {
+        if (task.schedule !== 'none') {
+          const occurrences = generateNextOccurrences(task)
+          recurringOccurrences.push(...occurrences)
+        }
+      })
+
+      // Combine future tasks with recurring occurrences and sort by date
+      const allFutureTasks = [...futureTasks, ...recurringOccurrences].sort((a, b) => {
+        const dateA = a.startDate ? new Date(a.startDate) : new Date()
+        const dateB = b.startDate ? new Date(b.startDate) : new Date()
+        return dateA.getTime() - dateB.getTime()
+      })
       
       // Calculate pagination for today's tasks
       const totalPages = Math.max(1, Math.ceil(todaysTasks.length / VISIBLE_TASKS))
@@ -67,7 +138,7 @@ export const useTasks = (): UseTasksReturn => {
       setState(prev => ({
         ...prev,
         tasks: todaysTasks,
-        futureTasks: futureTasks,
+        futureTasks: allFutureTasks,
         currentPage,
         totalPages,
         isLoading: false

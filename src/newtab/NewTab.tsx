@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { TaskList } from '../components/TaskList'
+import { useTasks } from '../hooks/useTasks'
+import { useCurrentTask } from '../hooks/useCurrentTask'
 import './NewTab.css'
 
 interface CompletionModalData {
@@ -10,6 +12,9 @@ interface CompletionModalData {
 }
 
 export const NewTab = () => {
+  const { tasks } = useTasks()
+  const { currentTask } = useCurrentTask(tasks)
+
   const getTime = () => {
     const date = new Date()
     const hour = String(date.getHours()).padStart(2, '0')
@@ -30,6 +35,7 @@ export const NewTab = () => {
   const [time, setTime] = useState(getTime())
   const [date, setDate] = useState(getDate())
   const [completionModalData, setCompletionModalData] = useState<CompletionModalData | null>(null)
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false)
 
   useEffect(() => {
     let intervalId = setInterval(() => {
@@ -68,15 +74,18 @@ export const NewTab = () => {
         <TaskList 
           className="task-list-container" 
           initialCompletionModal={completionModalData}
+          onCreateFormToggle={setIsCreateFormOpen}
         />
       </main>
 
-      {/* Footer */}
-      <footer className="new-tab-footer">
-        <p className="footer-text">
-          Task Manager Chrome Extension - Stay organized and productive
-        </p>
-      </footer>
+      {/* Footer - Hide when create form is open */}
+      {!isCreateFormOpen && (
+        <footer className="new-tab-footer">
+          <p className="footer-text">
+            Task Manager Chrome Extension - Stay organized and productive
+          </p>
+        </footer>
+      )}
     </div>
   )
 }

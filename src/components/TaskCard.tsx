@@ -9,9 +9,6 @@ export interface TaskCardProps {
   onComplete: (taskId: string) => void
   onEdit: (taskId: string) => void
   onDelete: (taskId: string) => void
-  isEditing?: boolean
-  onEditSubmit?: (taskId: string, updates: { name: string; description: string; websites: string; schedule: TaskSchedule; startDate: Date | null }) => void
-  onEditCancel?: () => void
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
@@ -20,50 +17,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onContinue,
   onComplete,
   onEdit,
-  onDelete,
-  isEditing = false,
-  onEditSubmit,
-  onEditCancel
+  onDelete
 }) => {
-  const [editData, setEditData] = useState({
-    name: task.name,
-    description: task.description || '',
-    websites: task.websites.join('\n'),
-    schedule: task.schedule,
-    startDate: task.startDate ? stringToDate(task.startDate) : null
-  })
-
-  const handleEditSubmit = (): void => {
-    if (onEditSubmit) {
-      onEditSubmit(task.id, editData)
-    }
-  }
-
-  const handleEditCancel = (): void => {
-    setEditData({
-      name: task.name,
-      description: task.description || '',
-      websites: task.websites.join('\n'),
-      schedule: task.schedule,
-      startDate: task.startDate ? (typeof task.startDate === 'string' ? new Date(task.startDate) : task.startDate) : null
-    })
-    if (onEditCancel) {
-      onEditCancel()
-    }
-  }
-
-  // Reset edit data when task changes or editing starts
-  React.useEffect(() => {
-    if (isEditing) {
-      setEditData({
-        name: task.name,
-        description: task.description || '',
-        websites: task.websites.join('\n'),
-        schedule: task.schedule,
-        startDate: task.startDate ? stringToDate(task.startDate) : null
-      })
-    }
-  }, [isEditing, task.id])
 
   const getStateColor = (state: TaskState): string => {
     switch (state) {
@@ -127,174 +82,73 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   }
 
-  if (isEditing && onEditSubmit && onEditCancel) {
-    return (
-      <div className={`task-card editing border-2 border-blue-400 ${getStateColor(task.state)}`}>
-        <div className="p-4">
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Task Name
-            </label>
-            <input
-              type="text"
-              value={editData.name}
-              onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter task name"
-            />
-          </div>
-          
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              value={editData.description}
-              onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter task description (optional)"
-              rows={2}
-            />
-          </div>
-          
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Recurrence
-            </label>
-            <select
-              value={editData.schedule}
-              onChange={(e) => setEditData(prev => ({ ...prev, schedule: e.target.value as TaskSchedule }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={TaskSchedule.NONE}>None</option>
-              <option value={TaskSchedule.DAILY}>Daily</option>
-              <option value={TaskSchedule.WEEKLY}>Weekly</option>
-              <option value={TaskSchedule.MONTHLY}>Monthly</option>
-            </select>
-          </div>
-          
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Start Date
-            </label>
-            <input
-              type="date"
-              value={formatDateForInput(editData.startDate)}
-              onChange={(e) => setEditData(prev => ({ 
-                ...prev, 
-                startDate: e.target.value ? parseDateStringToLocalDate(e.target.value) : null 
-              }))}
-              onClick={(e) => {
-                if ('showPicker' in e.target) {
-                  (e.target as any).showPicker()
-                }
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min={new Date().toISOString().split('T')[0]}
-            />
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Websites (one per line)
-            </label>
-            <textarea
-              value={editData.websites}
-              onChange={(e) => setEditData(prev => ({ ...prev, websites: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://example.com"
-              rows={3}
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={handleEditSubmit}
-              className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Save
-            </button>
-            <button
-              onClick={handleEditCancel}
-              className="flex-1 px-3 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
-    <div className={`task-card border-2 rounded-lg shadow-sm hover:shadow-md transition-shadow ${getStateColor(task.state)}`}>
-      <div className="p-4">
-        <div className="mb-2">
-          <h3 className="text-lg font-semibold text-gray-800">
+    <div className="task-card glass rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:transform hover:-translate-y-1">
+      <div className="p-6">
+        <div className="mb-4">
+          <h3 className="text-xl font-semibold text-white !mt-0 break-words" style={{ marginBlockStart: 0 }}>
             {task.name}
           </h3>
         </div>
         
         {task.description && (
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+          <p className="text-sm text-gray-300 mb-4 line-clamp-2">
             {task.description}
           </p>
         )}
         
-        <div className="mb-3">
-          <p className="text-xs text-gray-500 mb-1">Recurrence:</p>
-          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-            {getScheduleText(task.schedule)}
-          </span>
-        </div>
-        
-        {task.startDate && (
-          <div className="mb-3">
-            <p className="text-xs text-gray-500 mb-1">Starts:</p>
-            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-              {formatStartDate(task.startDate)}
+        {/* Only show recurrence if it's not NONE */}
+        {task.schedule !== TaskSchedule.NONE && (
+          <div className="mb-4">
+            <p className="text-xs text-gray-400 mb-2 font-medium">Recurrence:</p>
+            <span className="px-3 py-1 bg-blue-500 bg-opacity-20 text-blue-300 text-sm rounded-full border border-blue-500 border-opacity-30">
+              {getScheduleText(task.schedule)}
             </span>
           </div>
         )}
         
-        <div className="mb-3">
-          <p className="text-xs text-gray-500 mb-1">Websites ({task.websites.length}):</p>
-          <div className="flex flex-wrap gap-1">
-            {task.websites.slice(0, 3).map((website, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded truncate max-w-[120px]"
-                title={website}
-              >
-                {new URL(website).hostname}
-              </span>
-            ))}
-            {task.websites.length > 3 && (
-              <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded">
-                +{task.websites.length - 3} more
-              </span>
-            )}
+        {task.websites.length > 0 && (
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2">
+              {task.websites.map((website, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-gray-500 bg-opacity-20 text-gray-300 text-sm rounded-full truncate max-w-[200px] border border-gray-500 border-opacity-30"
+                  style={{
+                    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+                    color: '#d1d5db',
+                    borderColor: 'rgba(107, 114, 128, 0.3)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid'
+                  }}
+                  title={website}
+                >
+                  {new URL(website).hostname}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
+        )}
+        <div className="flex gap-3">
           {task.state === TaskState.PENDING && (
             <>
               <button
                 onClick={() => onStart(task.id)}
-                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-3 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all duration-200"
               >
                 Start Task
               </button>
               <button
                 onClick={() => onEdit(task.id)}
-                className="px-3 py-2 bg-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="px-4 py-3 bg-gray-500 bg-opacity-20 text-gray-300 text-sm rounded-xl hover:bg-gray-500 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-gray-500 border border-gray-500 border-opacity-30 transition-all duration-200"
                 title="Edit task"
               >
                 ✏️
               </button>
               <button
                 onClick={() => onDelete(task.id)}
-                className="px-3 py-2 bg-red-300 text-red-700 text-sm rounded-md hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="px-4 py-3 bg-red-500 bg-opacity-20 text-red-300 text-sm rounded-xl hover:bg-red-500 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-red-500 border border-red-500 border-opacity-30 transition-all duration-200"
                 title="Delete task"
               >
                 🗑️
@@ -306,21 +160,49 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <>
               <button
                 onClick={() => onContinue(task.id)}
-                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-3 text-white text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 font-medium transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                  boxShadow: '0 4px 15px rgba(234, 179, 8, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #ca8a04 0%, #a16207 100%)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(234, 179, 8, 0.4)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(234, 179, 8, 0.3)'
+                  e.currentTarget.style.transform = 'translateY(0px)'
+                }}
               >
-                Continue Task
+                Continue
               </button>
               <button
                 onClick={() => onComplete(task.id)}
-                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="flex-1 px-4 py-3 text-white text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 font-medium transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                  boxShadow: '0 4px 15px rgba(22, 163, 74, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #15803d 0%, #166534 100%)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(22, 163, 74, 0.4)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(22, 163, 74, 0.3)'
+                  e.currentTarget.style.transform = 'translateY(0px)'
+                }}
               >
-                Complete Task
+                Complete
               </button>
             </>
           )}
           
           {task.state === TaskState.COMPLETED && (
-            <div className="flex-1 px-3 py-2 bg-green-100 text-green-700 text-sm rounded-md text-center">
+            <div className="flex-1 px-4 py-3 bg-green-500 bg-opacity-20 text-green-300 text-sm rounded-xl text-center border border-green-500 border-opacity-30 font-medium">
               ✅ Task Completed
             </div>
           )}

@@ -32,6 +32,8 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     startDate: initialData.startDate || null
   })
 
+  const [websiteFields, setWebsiteFields] = useState<string[]>([''])
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -39,6 +41,14 @@ export const TaskForm: React.FC<TaskFormProps> = ({
   useEffect(() => {
     console.log('TaskForm mounted or re-rendered')
   })
+
+  // Initialize website fields from initial data
+  useEffect(() => {
+    if (initialData.websites) {
+      const websites = initialData.websites.split('\n').filter(website => website.trim() !== '')
+      setWebsiteFields(websites.length > 0 ? websites : [''])
+    }
+  }, [initialData.websites])
 
   // Create reset function
   const resetForm = () => {
@@ -50,6 +60,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       schedule: TaskSchedule.NONE,
       startDate: null
     })
+    setWebsiteFields([''])
     setErrors({})
   }
 
@@ -175,6 +186,36 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     }
   }
 
+  const handleWebsiteChange = (index: number, value: string) => {
+    const newWebsiteFields = [...websiteFields]
+    newWebsiteFields[index] = value
+    setWebsiteFields(newWebsiteFields)
+    
+    // Update the formData.websites with the combined values
+    const validWebsites = newWebsiteFields.filter(website => website.trim() !== '')
+    setFormData(prev => ({ ...prev, websites: validWebsites.join('\n') }))
+    
+    // Clear website error when user starts typing
+    if (errors.websites) {
+      setErrors(prev => ({ ...prev, websites: '' }))
+    }
+  }
+
+  const addWebsiteField = () => {
+    setWebsiteFields(prev => [...prev, ''])
+  }
+
+  const removeWebsiteField = (index: number) => {
+    if (websiteFields.length > 1) {
+      const newWebsiteFields = websiteFields.filter((_, i) => i !== index)
+      setWebsiteFields(newWebsiteFields)
+      
+      // Update the formData.websites with the remaining values
+      const validWebsites = newWebsiteFields.filter(website => website.trim() !== '')
+      setFormData(prev => ({ ...prev, websites: validWebsites.join('\n') }))
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       handleSubmit(e)
@@ -187,14 +228,13 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" 
+      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9999] p-4 backdrop-blur-lg" 
       style={{ 
         position: 'fixed', 
         top: 0, 
         left: 0, 
         right: 0, 
-        bottom: 0,
-        backdropFilter: 'blur(2px)'
+        bottom: 0
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -203,43 +243,48 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       }}
     >
       <div 
-        className="task-form bg-white rounded-lg shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative z-[10000]" 
+        className="task-form bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto relative z-[10000]" 
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
-        <div className="flex justify-between items-center mb-6">
-          <h2 id="modal-title" className="text-2xl font-bold text-gray-900">{title}</h2>
+        {/* Header */}
+        <div className="flex justify-between items-center px-6 border-b border-gray-600">
+          <h2 id="modal-title" className="text-xl font-bold text-white">{title}</h2>
           <button
             type="button"
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="w-8 h-8 bg-black border-2 border-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors group"
             disabled={isSubmitting}
+            title="Close"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 40 40"
+            >
+              <path 
+                d="M 10,10 L 30,30 M 30,10 L 10,30" 
+                stroke="white" 
+                strokeWidth="4" 
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
         
-        <p className="text-gray-600 mb-6">
-          {title.includes('Edit') 
-            ? 'Update the task details below.'
-            : 'Fill out the form below to create a new task.'
-          }
-        </p>
-        
-        {errors.general && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
-            <p className="text-red-700 text-sm">{errors.general}</p>
-          </div>
-        )}
+        {/* Content */}
+        <div className="px-6 py-4">
+          {errors.general && (
+            <div className="mb-4 p-3 bg-red-900 bg-opacity-50 border border-red-500 rounded text-red-200 text-sm">
+              {errors.general}
+            </div>
+          )}
 
-
-      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
+          <form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
         <div className="mb-4">
-          <label htmlFor="task-name" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="task-name" className="block text-sm font-medium text-gray-300 mb-2">
             Task Name *
           </label>
           <input
@@ -247,47 +292,47 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             type="text"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.name ? 'border-red-300' : 'border-gray-300'
+            className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+              errors.name ? 'border-red-500' : 'border-gray-600'
             }`}
             placeholder="Enter task name"
             disabled={isSubmitting}
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+            <p className="mt-1 text-sm text-red-400">{errors.name}</p>
           )}
         </div>
 
         <div className="mb-4">
-          <label htmlFor="task-description" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="task-description" className="block text-sm font-medium text-gray-300 mb-2">
             Description
           </label>
           <textarea
             id="task-description"
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.description ? 'border-red-300' : 'border-gray-300'
+            className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+              errors.description ? 'border-red-500' : 'border-gray-600'
             }`}
-            placeholder="Enter task description (optional)"
+            placeholder="Describe what needs to be done"
             rows={3}
             disabled={isSubmitting}
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+            <p className="mt-1 text-sm text-red-400">{errors.description}</p>
           )}
         </div>
 
         <div className="mb-4">
-          <label htmlFor="task-schedule" className="block text-sm font-medium text-gray-700 mb-2">
-            Recurrence *
+          <label htmlFor="task-schedule" className="block text-sm font-medium text-gray-300 mb-2">
+            Recurring Task
           </label>
           <select
             id="task-schedule"
             value={formData.schedule}
             onChange={(e) => handleInputChange('schedule', e.target.value as TaskSchedule)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.schedule ? 'border-red-300' : 'border-gray-300'
+            className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+              errors.schedule ? 'border-red-500' : 'border-gray-600'
             }`}
             disabled={isSubmitting}
           >
@@ -297,13 +342,13 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             <option value={TaskSchedule.MONTHLY}>Monthly</option>
           </select>
           {errors.schedule && (
-            <p className="mt-1 text-sm text-red-600">{errors.schedule}</p>
+            <p className="mt-1 text-sm text-red-400">{errors.schedule}</p>
           )}
         </div>
 
         <div className="mb-4">
-          <label htmlFor="task-start-date" className="block text-sm font-medium text-gray-700 mb-2">
-            Start Date {formData.schedule !== TaskSchedule.NONE ? '*' : ''}
+          <label htmlFor="task-start-date" className="block text-sm font-medium text-gray-300 mb-2">
+            Scheduled Date {formData.schedule !== TaskSchedule.NONE ? '*' : ''}
           </label>
           <input
             type="date"
@@ -315,89 +360,83 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                 (e.target as any).showPicker()
               }
             }}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.startDate ? 'border-red-300' : 'border-gray-300'
+            className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+              errors.startDate ? 'border-red-500' : 'border-gray-600'
             }`}
             disabled={isSubmitting}
-            min={new Date().toISOString().split('T')[0]}
+            min={formatDateForInput(new Date())}
             placeholder={formData.schedule !== TaskSchedule.NONE ? "Required for recurring tasks" : "Optional"}
           />
           {errors.startDate && (
-            <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>
+            <p className="mt-1 text-sm text-red-400">{errors.startDate}</p>
           )}
-          <p className="mt-1 text-xs text-gray-500">
-            {formData.schedule !== TaskSchedule.NONE 
-              ? "When should this recurring task first be available to start?"
-              : "When should this task first be available to start? (optional)"
-            }
-          </p>
         </div>
 
-        <div className="mb-6">
-          <label htmlFor="task-websites" className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Websites *
           </label>
-          <textarea
-            id="task-websites"
-            value={formData.websites}
-            onChange={(e) => handleInputChange('websites', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.websites ? 'border-red-300' : 'border-gray-300'
-            }`}
-            placeholder="Enter URLs, one per line:&#10;https://example.com&#10;https://another-site.com"
-            rows={4}
-            disabled={isSubmitting}
-          />
-          {errors.websites && (
-            <p className="mt-1 text-sm text-red-600">{errors.websites}</p>
-          )}
           
-          {/* Real-time URL validation feedback */}
-          {formData.websites && (
-            <div className="mt-2 text-xs">
-              <div className="text-gray-600 mb-1">URL Validation:</div>
-              {formData.websites.split('\n').map((line, index) => {
-                const trimmedLine = line.trim()
-                if (trimmedLine.length === 0) return null
-                
-                const isValid = isValidUrl(trimmedLine)
-                
-                return (
-                  <div key={index} className={`flex items-center gap-2 mb-1 ${isValid ? 'text-green-600' : 'text-red-600'}`}>
-                    <span>{isValid ? '✓' : '✗'}</span>
-                    <span className="truncate">{trimmedLine}</span>
-                    {!isValid && (
-                      <span className="text-red-500">(Invalid URL)</span>
-                    )}
-                  </div>
-                )
-              })}
+          {/* Dynamic Website Fields */}
+          {websiteFields.map((website, index) => (
+            <div key={index} className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={website}
+                onChange={(e) => handleWebsiteChange(index, e.target.value)}
+                className={`flex-1 px-3 py-2 bg-gray-700 border rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  errors.websites ? 'border-red-500' : 'border-gray-600'
+                }`}
+                placeholder="https://example.com"
+                disabled={isSubmitting}
+              />
+              {websiteFields.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeWebsiteField(index)}
+                  className="px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                  disabled={isSubmitting}
+                >
+                  ✕
+                </button>
+              )}
             </div>
+          ))}
+          
+          {errors.websites && (
+            <p className="mt-1 text-sm text-red-400">{errors.websites}</p>
           )}
           
-          <p className="mt-1 text-xs text-gray-500">
-            Enter one URL per line. Only valid website URLs will be accepted.
-          </p>
-        </div>
-
-        <div className="flex gap-3">
+          {/* Add Website Button */}
           <button
             type="button"
-            onClick={onCancel}
-            className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
+            className="mt-2 px-3 py-1 bg-gray-600 text-gray-300 text-sm rounded hover:bg-gray-500 transition-colors"
+            onClick={addWebsiteField}
             disabled={isSubmitting}
           >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            disabled={isSubmitting || isLoading}
-          >
-            {isSubmitting ? 'Creating...' : submitText}
+            + Add Website
           </button>
         </div>
-      </form>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2 bg-gray-600 text-gray-300 rounded hover:bg-gray-500 focus:outline-none disabled:opacity-50 transition-colors"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none disabled:opacity-50 transition-colors"
+                disabled={isSubmitting || isLoading}
+              >
+                {isSubmitting ? 'Creating...' : submitText}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )

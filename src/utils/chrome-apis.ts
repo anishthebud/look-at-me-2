@@ -280,6 +280,46 @@ export const chromeTabGroups = {
   },
 
   /**
+   * Get the current active tab's group information
+   */
+  getCurrentTabGroup: async (): Promise<{ id: number; title: string } | null> => {
+    return new Promise((resolve) => {
+      if (!chrome.tabs || !chrome.tabGroups) {
+        console.log('Chrome tabs or tab groups API not available')
+        resolve(null)
+        return
+      }
+
+      // Get the current active tab
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (chrome.runtime.lastError || !tabs || tabs.length === 0) {
+          console.log('No active tab found')
+          resolve(null)
+          return
+        }
+
+        const activeTab = tabs[0]
+        if (activeTab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE) {
+          console.log('Active tab is not in a group')
+          resolve(null)
+          return
+        }
+
+        // Get the group information
+        chrome.tabGroups.get(activeTab.groupId, (group) => {
+          if (chrome.runtime.lastError) {
+            console.log('Error getting tab group:', chrome.runtime.lastError.message)
+            resolve(null)
+            return
+          }
+
+          resolve({ id: group.id, title: group.title || '' })
+        })
+      })
+    })
+  },
+
+  /**
    * Focus on an existing tab group (bring it to foreground)
    */
   focusGroup: async (groupId: number): Promise<boolean> => {

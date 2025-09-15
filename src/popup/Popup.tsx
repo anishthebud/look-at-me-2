@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Task, TaskState } from '../types'
 import { useTasks } from '../hooks/useTasks'
+import { useCurrentTask } from '../hooks/useCurrentTask'
 import { useToast } from '../hooks/useToast'
 import { Toast } from '../components/Toast'
 import './Popup.css'
@@ -21,6 +22,7 @@ export const Popup = () => {
   } = useTasks()
 
   const { modal, removeModal, showSuccessModal, showErrorModal } = useToast()
+  const { currentTask } = useCurrentTask(tasks)
 
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -146,24 +148,50 @@ export const Popup = () => {
         <div className="error-message">{error}</div>
       )}
 
-      {tasks.length === 0 && !isLoading ? (
-        <div className="no-tasks">
-          <div className="no-tasks-icon">📋</div>
-          <p>No tasks yet. Click "Manage Tasks" to create your first task!</p>
-        </div>
-      ) : (
+      {(() => {
+        // Filter to show in-progress tasks first, then unstarted tasks if no in-progress
+        const inProgressTasks = tasks.filter(task => task.state === TaskState.IN_PROGRESS)
+        const unstartedTasks = tasks.filter(task => task.state === TaskState.PENDING)
+        
+        // Use in-progress tasks if available, otherwise use unstarted tasks
+        const displayTasks = inProgressTasks.length > 0 ? inProgressTasks : unstartedTasks
+        
+        if (displayTasks.length === 0 && !isLoading) {
+          return (
+            <div className="no-tasks">
+              <div className="no-tasks-icon">🚀</div>
+              <p>No tasks available. Create a task to get started!</p>
+            </div>
+          )
+        }
+        
+        return (
         <div className="tasks-container">
-          {tasks.slice(0, 5).map((task) => (
-            <div key={task.id} className="task-card">
+          {displayTasks
+            .sort((a, b) => {
+              // Put current task first
+              if (currentTask) {
+                if (a.id === currentTask.id) return -1
+                if (b.id === currentTask.id) return 1
+              }
+              return 0
+            })
+            .slice(0, 5)
+            .map((task) => {
+              const isCurrentTask = currentTask && currentTask.id === task.id
+              return (
+            <div key={task.id} className={`task-card ${isCurrentTask ? 'current-task' : ''}`}>
               <div className="task-header">
                 <h4 className="task-name">{task.name}</h4>
                 <span className={`task-state ${getStateColor(task.state)}`}>
-                  {getStateText(task.state)}
+                  {isCurrentTask ? 'Current Task' : getStateText(task.state)}
                 </span>
               </div>
               
               {task.description && (
-                <p className="task-description">{task.description}</p>
+                <p className={`task-description ${isCurrentTask ? 'current-task-description' : ''}`}>
+                  {task.description}
+                </p>
               )}
               
               <div className="task-actions">
@@ -186,15 +214,17 @@ export const Popup = () => {
                 
                 {task.state === TaskState.IN_PROGRESS && (
                   <>
-                    <button
-                      onClick={() => handleContinueTask(task.id)}
-                      className="action-btn continue-btn"
-                    >
-                      Continue
-                    </button>
+                    {!isCurrentTask && (
+                      <button
+                        onClick={() => handleContinueTask(task.id)}
+                        className="action-btn continue-btn"
+                      >
+                        Continue
+                      </button>
+                    )}
                     <button
                       onClick={() => handleCompleteTask(task.id)}
-                      className="action-btn complete-btn"
+                      className={`action-btn complete-btn ${isCurrentTask ? 'full-width' : ''}`}
                     >
                       Complete
                     </button>
@@ -206,21 +236,23 @@ export const Popup = () => {
                 )}
               </div>
             </div>
-          ))}
-          
-          {tasks.length > 5 && (
-            <div className="more-tasks">
-              <p>+{tasks.length - 5} more tasks</p>
-              <button
-                onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') })}
-                className="view-all-btn"
-              >
-                View All in New Tab
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+            )
+            })}
+            
+            {displayTasks.length > 5 && (
+              <div className="more-tasks">
+                <p>+{displayTasks.length - 5} more {inProgressTasks.length > 0 ? 'tasks in progress' : 'unstarted tasks'}</p>
+                <button
+                  onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') })}
+                  className="view-all-btn"
+                >
+                  View All in New Tab
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
 
       {/* Completion Modal */}

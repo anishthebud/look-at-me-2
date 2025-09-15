@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Task, TaskState, UpdateTaskData, TaskSchedule } from '../types'
 import { useTasks } from '../hooks/useTasks'
+import { useCurrentTask } from '../hooks/useCurrentTask'
 import { TaskCard } from './TaskCard'
 import { TaskForm } from './TaskForm'
 import { FutureTasksModal } from './FutureTasksModal'
 import { CreateTaskData, TaskFormData } from '../types'
 import { parseWebsitesString } from '../utils/validation'
 import { useToast } from '../hooks/useToast'
+import { stringToDate } from '../utils/dateUtils'
 import Toast from './Toast'
 
 interface CompletionModalData {
@@ -19,9 +21,10 @@ interface CompletionModalData {
 interface TaskListProps {
   className?: string
   initialCompletionModal?: CompletionModalData | null
+  onCreateFormToggle?: (isOpen: boolean) => void
 }
 
-export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompletionModal = null }) => {
+export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompletionModal = null, onCreateFormToggle }) => {
   const {
     tasks,
     futureTasks,
@@ -39,11 +42,15 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
     refreshTasks
   } = useTasks()
 
+  const { currentTask } = useCurrentTask(tasks)
+
   const { modal, removeModal, showSuccessModal, showErrorModal } = useToast()
 
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [showFutureTasksModal, setShowFutureTasksModal] = useState(false)
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editingFromFutureModal, setEditingFromFutureModal] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const formResetRef = useRef<(() => void) | null>(null)
 
@@ -54,10 +61,26 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
     }
   }, [initialCompletionModal, showSuccessModal])
 
-  // Get tasks for current page
+  // Notify parent when create form state changes
+  useEffect(() => {
+    if (onCreateFormToggle) {
+      onCreateFormToggle(showCreateForm || showEditForm)
+    }
+  }, [showCreateForm, showEditForm, onCreateFormToggle])
+
+  // Get tasks for current page, sorted with current task first
+  const sortedTasks = tasks.sort((a, b) => {
+    // Put current task first
+    if (currentTask) {
+      if (a.id === currentTask.id) return -1
+      if (b.id === currentTask.id) return 1
+    }
+    return 0
+  })
+  
   const startIndex = (currentPage - 1) * 8 // VISIBLE_TASKS
   const endIndex = startIndex + 8
-  const currentTasks = tasks.slice(startIndex, endIndex)
+  const currentTasks = sortedTasks.slice(startIndex, endIndex)
 
   const handleCreateTask = async (taskData: CreateTaskData): Promise<{ success: boolean; error?: string }> => {
     console.log('TaskList received task data:', taskData) // Debug log
@@ -78,25 +101,40 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
     return result
   }
 
-  const handleEditTask = async (taskId: string, updates: { name: string; description: string; websites: string; schedule: TaskSchedule; startDate: Date | null }): Promise<void> => {
-    setActionError(null)
-    
-    const websites = parseWebsitesString(updates.websites)
-    const updateData: UpdateTaskData = {
-      name: updates.name,
-      description: updates.description || undefined,
-      websites,
-      schedule: updates.schedule,
-      startDate: updates.startDate || undefined
+  const handleEditTask = async (taskData: CreateTaskData): Promise<{ success: boolean; error?: string }> => {
+    if (!editingTask) {
+      return { success: false, error: 'No task selected for editing' }
     }
 
-    const result = await updateTask(taskId, updateData)
+    setActionError(null)
+    
+    const updateData: UpdateTaskData = {
+      name: taskData.name,
+      description: taskData.description || undefined,
+      websites: taskData.websites,
+      schedule: taskData.schedule,
+      startDate: taskData.startDate || undefined
+    }
+
+    const result = await updateTask(editingTask.id, updateData)
     
     if (result.success) {
-      setEditingTaskId(null)
+      setShowEditForm(false)
+      setEditingTask(null)
+      // Reset the form data after successful update
+      if (formResetRef.current) {
+        formResetRef.current()
+      }
+      // If we were editing from future modal, return to it
+      if (editingFromFutureModal) {
+        setShowFutureTasksModal(true)
+        setEditingFromFutureModal(false)
+      }
     } else {
       setActionError(result.error || 'Failed to update task')
     }
+    
+    return result
   }
 
   const handleDeleteTask = async (taskId: string): Promise<void> => {
@@ -152,12 +190,19 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
   }
 
   const handleEdit = (taskId: string): void => {
-    setEditingTaskId(taskId)
-  }
-
-  const handleEditCancel = (): void => {
-    setEditingTaskId(null)
-    setActionError(null)
+    // Look for task in both regular tasks and future tasks
+    const task = tasks.find(t => t.id === taskId) || futureTasks.find(t => t.id === taskId)
+    if (task) {
+      // If it's a future task, close the future tasks modal and set flag
+      if (futureTasks.find(t => t.id === taskId)) {
+        setShowFutureTasksModal(false)
+        setEditingFromFutureModal(true)
+      } else {
+        setEditingFromFutureModal(false)
+      }
+      setEditingTask(task)
+      setShowEditForm(true)
+    }
   }
 
   const getEmptyStateMessage = (): string => {
@@ -212,33 +257,28 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
   return (
     <div className={`task-list ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">My Tasks</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-white mb-2">My Tasks</h1>
+          <p className="text-gray-300 text-lg">
             {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} • Page {currentPage} of {totalPages}
-            {futureTasks.length > 0 && (
-              <span className="ml-2 text-orange-600">
-                • {futureTasks.length} future scheduled
-              </span>
-            )}
           </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           {futureTasks.length > 0 && !showCreateForm && (
             <button
               onClick={() => setShowFutureTasksModal(true)}
-              className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium transition-all duration-200"
             >
-              📅 Future Tasks ({futureTasks.length})
+              📅 Future Tasks
             </button>
           )}
           
           {!showCreateForm && (
             <button
               onClick={() => setShowCreateForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all duration-200"
             >
               + New Task
             </button>
@@ -248,18 +288,18 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
 
       {/* Action Error */}
       {actionError && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-3">
+        <div className="mb-6 bg-red-500 bg-opacity-20 border border-red-500 rounded-xl p-4 backdrop-blur-sm">
           <div className="flex">
             <div className="flex-shrink-0">
-              <span className="text-red-400">⚠️</span>
+              <span className="text-red-400 text-lg">⚠️</span>
             </div>
             <div className="ml-3 flex-1">
-              <p className="text-sm text-red-700">{actionError}</p>
+              <p className="text-sm text-red-300 font-medium">{actionError}</p>
             </div>
             <div className="ml-auto pl-3">
               <button
                 onClick={() => setActionError(null)}
-                className="text-red-400 hover:text-red-600"
+                className="text-red-400 hover:text-red-300 p-1 rounded-lg hover:bg-red-500 hover:bg-opacity-20 transition-colors"
               >
                 ✕
               </button>
@@ -283,75 +323,106 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
                />
              )}
 
-      {/* Tasks Grid */}
-      {currentTasks.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {currentTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onStart={handleStartTask}
-              onContinue={handleContinueTask}
-              onComplete={handleCompleteTask}
-              onEdit={handleEdit}
-              onDelete={handleDeleteTask}
-              isEditing={editingTaskId === task.id}
-              onEditSubmit={handleEditTask}
-              onEditCancel={handleEditCancel}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">📋</div>
-          <h3 className="text-lg font-medium text-gray-600 mb-2">No tasks here</h3>
-          <p className="text-gray-500 mb-4">{getEmptyStateMessage()}</p>
-          {!showCreateForm && tasks.length === 0 && (
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Create Your First Task
-            </button>
-          )}
-        </div>
+      {/* Edit Task Form */}
+      {showEditForm && editingTask && (
+        <TaskForm
+          onSubmit={handleEditTask}
+          onCancel={() => {
+            setShowEditForm(false)
+            setEditingTask(null)
+            setActionError(null)
+            // If we were editing from future modal, return to it
+            if (editingFromFutureModal) {
+              setShowFutureTasksModal(true)
+              setEditingFromFutureModal(false)
+            }
+          }}
+          onFormReady={(resetFn) => {
+            formResetRef.current = resetFn
+          }}
+          isOpen={showEditForm}
+          title="Edit Task"
+          submitText="Update Task"
+          initialData={{
+            name: editingTask.name,
+            description: editingTask.description || '',
+            websites: editingTask.websites.join('\n'),
+            schedule: editingTask.schedule,
+            startDate: editingTask.startDate ? stringToDate(editingTask.startDate) : null
+          }}
+        />
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            ← Previous
-          </button>
-          
-          <div className="flex gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+      {/* Tasks Grid - Hide when creating or editing task */}
+      {!showCreateForm && !showEditForm && (
+        <>
+          {currentTasks.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {currentTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onStart={handleStartTask}
+                  onContinue={handleContinueTask}
+                  onComplete={handleCompleteTask}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteTask}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-gray-400 text-8xl mb-6">📋</div>
+              <h3 className="text-xl font-medium text-white mb-3">No tasks here</h3>
+              <p className="text-gray-400 text-lg mb-6">{getEmptyStateMessage()}</p>
+              {tasks.length === 0 && (
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all duration-200"
+                >
+                  Create Your First Task
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Pagination - Hide when creating new task */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-8">
               <button
-                key={page}
-                onClick={() => goToPage(page)}
-                className={`px-3 py-2 rounded-md text-sm ${
-                  page === currentPage
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-gray-500 bg-opacity-20 text-gray-300 rounded-xl hover:bg-gray-500 hover:bg-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-500 border-opacity-30 transition-all duration-200 font-medium"
               >
-                {page}
+                ← Previous
               </button>
-            ))}
-          </div>
-          
-          <button
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next →
-          </button>
-        </div>
+              
+              <div className="flex gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => goToPage(page)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      page === currentPage
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-gray-500 bg-opacity-20 text-gray-300 hover:bg-gray-500 hover:bg-opacity-30 border border-gray-500 border-opacity-30'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 bg-gray-500 bg-opacity-20 text-gray-300 rounded-xl hover:bg-gray-500 hover:bg-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-500 border-opacity-30 transition-all duration-200 font-medium"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
       
       {/* Completion modal */}
