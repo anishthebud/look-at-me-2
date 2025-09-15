@@ -137,7 +137,9 @@ export const FutureTasksModal: React.FC<FutureTasksModalProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {tasks.map((task) => (
+                  {tasks.map((task) => {
+                    const isGenerated = /(_next_after_base|_next_occurrence|_occurrence_)/.test(task.id)
+                    return (
                     <tr key={task.id} className="border-b border-gray-700 hover:bg-gray-700 hover:bg-opacity-30 transition-colors">
                       <td className="py-3 px-4 text-center border-r border-gray-600">
                         <div className="font-medium text-white text-sm">
@@ -186,24 +188,31 @@ export const FutureTasksModal: React.FC<FutureTasksModalProps> = ({
                       </td>
                       <td className="py-3 px-4 text-center">
                         <div className="flex gap-1 justify-center">
-                          <button
-                            onClick={() => onEdit(task.id)}
-                            className="px-2 py-1 bg-gray-600 text-gray-300 text-xs rounded hover:bg-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
-                            title="Edit task"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => onDelete(task.id)}
-                            className="px-2 py-1 bg-red-600 text-red-300 text-xs rounded hover:bg-red-500 focus:outline-none focus:ring-1 focus:ring-red-400 transition-colors"
-                            title="Delete task"
-                          >
-                            🗑️
-                          </button>
+                          {isGenerated ? (
+                            <span className="text-gray-400 text-xs">None</span>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => onEdit(task.id)}
+                                className="px-2 py-1 bg-gray-600 text-gray-300 text-xs rounded hover:bg-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
+                                title="Edit task"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => onDelete(task.id)}
+                                className="px-2 py-1 bg-red-600 text-red-300 text-xs rounded hover:bg-red-500 focus:outline-none focus:ring-1 focus:ring-red-400 transition-colors"
+                                title="Delete task"
+                              >
+                                🗑️
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

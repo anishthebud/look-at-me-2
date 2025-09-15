@@ -4,7 +4,7 @@ import { taskStorage, chromeTabs, chromeTabGroups } from '../utils/chrome-apis'
 import { MAX_TASKS_PER_DAY, VISIBLE_TASKS } from '../utils/constants'
 import { validateTask } from '../utils/validation'
 import { isToday, isFutureDate, parseDateStringToLocalDate } from '../utils/dateUtils'
-import { buildNextAfterBaseTask, getNextAfterBaseDate } from '../utils/recurrence'
+import { buildNextAfterBaseTask, getNextAfterBaseDate, buildNextOccurrenceTask } from '../utils/recurrence'
 
 /**
  * Generate next occurrences for recurring tasks
@@ -116,15 +116,14 @@ export const useTasks = (): UseTasksReturn => {
         return isFutureDate(task.startDate)
       })
 
-      // Add one additional next occurrence for recurring tasks immediately after base occurrence
-      // This ensures when a recurring task is created (today or any date), the very next occurrence is visible too
+      // Add the next occurrence ONLY when the base occurrence is today
+      // Ensures: only one instance exists in Future Tasks; next shows when the day arrives
       const recurringOccurrences: Task[] = []
       activeTasks.forEach(task => {
-        if (task.schedule !== 'none' && task.startDate) {
-          const nextAfterBase = buildNextAfterBaseTask(task)
-          if (nextAfterBase) {
-            recurringOccurrences.push(nextAfterBase)
-          }
+        if (task.schedule !== 'none' && task.startDate && isToday(task.startDate)) {
+          // Respect optional nextOccurrenceAnchor if present
+          const next = buildNextOccurrenceTask(task)
+          if (next) recurringOccurrences.push(next)
         }
       })
 

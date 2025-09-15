@@ -125,7 +125,9 @@ export const buildNextAfterBaseTask = (task: Task): Task | null => {
 export const buildNextOccurrenceTask = (task: Task): Task | null => {
   if (!task.startDate || task.schedule === TaskSchedule.NONE) return null
 
-  const nextIso = getNextOccurrenceDate(task.startDate, task.schedule)
+  // If an anchor exists, use the next after the anchor; otherwise next after startDate strictly > today
+  const base = task.nextOccurrenceAnchor || task.startDate
+  const nextIso = getNextAfterBaseDate(base, task.schedule)
   if (!nextIso) return null
 
   return {

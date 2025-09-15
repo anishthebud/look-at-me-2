@@ -10,6 +10,7 @@ import { parseWebsitesString } from '../utils/validation'
 import { useToast } from '../hooks/useToast'
 import { stringToDate } from '../utils/dateUtils'
 import Toast from './Toast'
+import { getNextAfterBaseDate } from '../utils/recurrence'
 
 interface CompletionModalData {
   taskName: string
@@ -139,15 +140,68 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
 
   const handleDeleteTask = async (taskId: string): Promise<void> => {
     setActionError(null)
-    
-    if (!window.confirm('Are you sure you want to delete this task?')) {
+
+    // Find task in current or future tasks
+    const allTasks: Task[] = [...tasks, ...futureTasks]
+    const located = allTasks.find(t => t.id === taskId) || null
+
+    // Prevent deleting generated occurrences via main grid (ignore silently)
+    if (located && /(_next_after_base|_next_occurrence|_occurrence_)/.test(located.id)) {
       return
     }
 
-    const result = await deleteTask(taskId)
-    
-    if (!result.success) {
-      setActionError(result.error || 'Failed to delete task')
+    // If not found, fallback to simple delete
+    if (!located) {
+      if (!window.confirm('Are you sure you want to delete this task?')) return
+      const result = await deleteTask(taskId)
+      if (!result.success) setActionError(result.error || 'Failed to delete task')
+      return
+    }
+
+    // Determine if this is a generated occurrence (not persisted) by ID pattern
+    const isGeneratedOccurrence = /(_next_after_base|_next_occurrence|_occurrence_)/.test(located.id)
+    const parentId = isGeneratedOccurrence ? located.id.split('_')[0] : located.id
+
+    // Non-recurring: normal delete
+    if (!located.schedule || located.schedule === TaskSchedule.NONE) {
+      if (!window.confirm('Are you sure you want to delete this task?')) return
+      const result = await deleteTask(located.id)
+      if (!result.success) setActionError(result.error || 'Failed to delete task')
+      return
+    }
+
+    // Recurring: ask whether to delete entire task or just this occurrence
+    const deleteEntire = window.confirm(
+      'OK = Delete entire task\nCancel = Delete only this occurrence'
+    )
+
+    if (deleteEntire) {
+      const result = await deleteTask(parentId)
+      if (!result.success) setActionError(result.error || 'Failed to delete task')
+      return
+    }
+
+    // Delete only this occurrence
+    if (isGeneratedOccurrence) {
+      // For a future generated occurrence, do NOT change parent startDate.
+      // Instead, set an anchor so the next occurrence skips the deleted date.
+      if (located.startDate) {
+        const nextAfter = getNextAfterBaseDate(located.startDate, located.schedule as TaskSchedule)
+        const result = await updateTask(parentId, { nextOccurrenceAnchor: located.startDate })
+        if (!result.success) setActionError(result.error || 'Failed to update task')
+      }
+      return
+    } else {
+      // Deleting the base future occurrence: advance base to the next base date
+      if (located.startDate) {
+        const nextBaseIso = getNextAfterBaseDate(located.startDate, located.schedule as TaskSchedule)
+        if (nextBaseIso) {
+          const result = await updateTask(located.id, { startDate: nextBaseIso })
+          if (!result.success) setActionError(result.error || 'Failed to update task date')
+          return
+        }
+      }
+      // Fallback: if cannot compute next, do nothing
     }
   }
 
@@ -193,6 +247,10 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
     // Look for task in both regular tasks and future tasks
     const task = tasks.find(t => t.id === taskId) || futureTasks.find(t => t.id === taskId)
     if (task) {
+      // Prevent editing generated occurrences
+      if (/_next_after_base|_next_occurrence|_occurrence_/.test(task.id)) {
+        return
+      }
       // If it's a future task, close the future tasks modal and set flag
       if (futureTasks.find(t => t.id === taskId)) {
         setShowFutureTasksModal(false)

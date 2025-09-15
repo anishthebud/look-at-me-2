@@ -20,6 +20,12 @@ export interface Task {
   state: TaskState
   schedule: TaskSchedule
   startDate?: string  // Always stored as ISO string
+  /**
+   * Optional anchor to compute the next occurrence from (used to skip a deleted occurrence).
+   * When set, the next occurrence will be computed as the day after this date rather than
+   * strictly after the base startDate.
+   */
+  nextOccurrenceAnchor?: string
   createdAt: string   // Always stored as ISO string
   updatedAt: string   // Always stored as ISO string
   completedAt?: string // Always stored as ISO string
@@ -41,6 +47,7 @@ export interface UpdateTaskData {
   state?: TaskState
   schedule?: TaskSchedule
   startDate?: Date | string  // Accept both for flexibility
+  nextOccurrenceAnchor?: string
   order?: number
 }
 
