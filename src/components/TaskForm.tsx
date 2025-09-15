@@ -364,7 +364,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
               errors.startDate ? 'border-red-500' : 'border-gray-600'
             }`}
             disabled={isSubmitting}
-            min={formatDateForInput(new Date())}
+R            min={formatDateForInput(new Date())}
             placeholder={formData.schedule !== TaskSchedule.NONE ? "Required for recurring tasks" : "Optional"}
           />
           {errors.startDate && (

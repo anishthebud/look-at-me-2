@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Task, TaskState, CreateTaskData, UpdateTaskData, TaskListState } from '../types'
+import { Task, TaskState, TaskSchedule, CreateTaskData, UpdateTaskData, TaskListState } from '../types'
 import { taskStorage, chromeTabs, chromeTabGroups } from '../utils/chrome-apis'
 import { MAX_TASKS_PER_DAY, VISIBLE_TASKS } from '../utils/constants'
 import { validateTask } from '../utils/validation'
 import { isToday, isFutureDate, parseDateStringToLocalDate } from '../utils/dateUtils'
+import { buildNextAfterBaseTask, getNextAfterBaseDate } from '../utils/recurrence'
 
 /**
  * Generate next occurrences for recurring tasks
@@ -115,12 +116,15 @@ export const useTasks = (): UseTasksReturn => {
         return isFutureDate(task.startDate)
       })
 
-      // Add recurring task occurrences to future tasks
+      // Add one additional next occurrence for recurring tasks immediately after base occurrence
+      // This ensures when a recurring task is created (today or any date), the very next occurrence is visible too
       const recurringOccurrences: Task[] = []
       activeTasks.forEach(task => {
-        if (task.schedule !== 'none') {
-          const occurrences = generateNextOccurrences(task)
-          recurringOccurrences.push(...occurrences)
+        if (task.schedule !== 'none' && task.startDate) {
+          const nextAfterBase = buildNextAfterBaseTask(task)
+          if (nextAfterBase) {
+            recurringOccurrences.push(nextAfterBase)
+          }
         }
       })
 
@@ -584,11 +588,33 @@ export const useTasks = (): UseTasksReturn => {
         // Continue with task completion even if tab group closure fails
       }
 
-      // Update task state to completed
-      const success = await taskStorage.updateTask(taskId, {
-        state: TaskState.COMPLETED,
-        completedAt: new Date().toISOString()
-      })
+      // If recurring, roll the base task forward to its next base occurrence and set state back to pending
+      let success: boolean
+      if (task.schedule && task.schedule !== 'none' && task.startDate) {
+        const nextBaseIso = getNextAfterBaseDate(task.startDate, task.schedule as TaskSchedule)
+        if (nextBaseIso) {
+          success = await taskStorage.updateTask(taskId, {
+            startDate: nextBaseIso,
+            state: TaskState.PENDING,
+            completedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })
+        } else {
+          // Fallback: if we cannot compute next base, mark completed
+          success = await taskStorage.updateTask(taskId, {
+            state: TaskState.COMPLETED,
+            completedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })
+        }
+      } else {
+        // Non-recurring: mark completed
+        success = await taskStorage.updateTask(taskId, {
+          state: TaskState.COMPLETED,
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+      }
 
       if (!success) {
         return {
