@@ -39,7 +39,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   // Add debugging for component lifecycle
   useEffect(() => {
-    console.log('TaskForm mounted or re-rendered')
   })
 
   // Initialize website fields from initial data
@@ -52,7 +51,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   // Create reset function
   const resetForm = () => {
-    console.log('Resetting form data')
     setFormData({
       name: '',
       description: '',
@@ -84,9 +82,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   // Only reset form data when the component first mounts with initial data
   useEffect(() => {
-    console.log('TaskForm initialData useEffect triggered', initialData)
     if (initialData && (initialData.name || initialData.description || initialData.websites || initialData.schedule || initialData.startDate)) {
-      console.log('Resetting form data due to initialData')
       setFormData({
         name: initialData.name || '',
         description: initialData.description || '',
@@ -104,7 +100,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       description: formData.description,
       websites,
       schedule: formData.schedule,
-      startDate: formData.startDate || undefined
+      startDate: formData.startDate
     })
 
     const newErrors: Record<string, string> = {}
@@ -134,8 +130,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     
     try {
       const websites = parseWebsitesString(formData.websites)
-      console.log('Parsed websites:', websites) // Debug log
-      console.log('Original websites string:', formData.websites) // Debug log
       
       const taskData: CreateTaskData = {
         name: formData.name,
@@ -145,9 +139,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         startDate: formData.startDate || undefined
       }
 
-      console.log('Submitting task data:', taskData) // Debug log
       const result = await onSubmit(taskData)
-      console.log('Submit result:', result) // Debug log
       
       if (result.success) {
         // Don't reset form data here - let the parent component handle it
@@ -156,7 +148,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         setErrors({ general: result.error || 'Failed to create task' })
       }
     } catch (error) {
-      console.error('Error submitting form:', error)
       setErrors({ general: 'An unexpected error occurred' })
     } finally {
       setIsSubmitting(false)
@@ -164,7 +155,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({
   }
 
   const handleInputChange = (field: keyof TaskFormData, value: string | Date | TaskSchedule | null): void => {
-    console.log(`Form input change - ${field}:`, value) // Debug log
     setFormData(prev => {
       let processedValue: any = value
       
@@ -173,10 +163,16 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         processedValue = value ? parseDateStringToLocalDate(value) : null
       }
 
-      console.log('Processed value:', processedValue);
       
       const newData = { ...prev, [field]: processedValue }
-      console.log('Updated form data:', newData) // Debug log
+      
+      // If schedule changed to a recurring type and startDate is null, set it to today
+      if (field === 'schedule' && value !== TaskSchedule.NONE && !newData.startDate) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0) // Reset time to start of day
+        newData.startDate = today
+      }
+      
       return newData
     })
     
@@ -243,7 +239,11 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       }}
     >
       <div 
-        className="task-form bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto relative z-[10000]" 
+        className="task-form rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto relative z-[10000]" 
+        style={{
+          backgroundColor: '#1e293b',
+          borderColor: '#374151'
+        }}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
@@ -277,7 +277,15 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         {/* Content */}
         <div className="px-6 py-4">
           {errors.general && (
-            <div className="mb-4 p-3 bg-red-900 bg-opacity-50 border border-red-500 rounded text-red-200 text-sm">
+            <div style={{ 
+              marginBottom: '16px', 
+              padding: '12px', 
+              backgroundColor: 'rgba(127, 29, 29, 0.5)', 
+              border: '1px solid #ef4444', 
+              borderRadius: '6px', 
+              color: '#fecaca', 
+              fontSize: '14px' 
+            }}>
               {errors.general}
             </div>
           )}
@@ -299,7 +307,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             disabled={isSubmitting}
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-red-400">{errors.name}</p>
+            <p style={{ marginTop: '4px', fontSize: '14px', color: '#f87171' }}>{errors.name}</p>
           )}
         </div>
 
@@ -319,7 +327,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             disabled={isSubmitting}
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-400">{errors.description}</p>
+            <p style={{ marginTop: '4px', fontSize: '14px', color: '#f87171' }}>{errors.description}</p>
           )}
         </div>
 
@@ -334,15 +342,19 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
               errors.schedule ? 'border-red-500' : 'border-gray-600'
             }`}
+            style={{
+              backgroundColor: '#374151',
+              color: 'white'
+            }}
             disabled={isSubmitting}
           >
-            <option value={TaskSchedule.NONE}>None</option>
-            <option value={TaskSchedule.DAILY}>Daily</option>
-            <option value={TaskSchedule.WEEKLY}>Weekly</option>
-            <option value={TaskSchedule.MONTHLY}>Monthly</option>
+            <option value={TaskSchedule.NONE} style={{ backgroundColor: '#1f2937', color: 'white' }}>None</option>
+            <option value={TaskSchedule.DAILY} style={{ backgroundColor: '#1f2937', color: 'white' }}>Daily</option>
+            <option value={TaskSchedule.WEEKLY} style={{ backgroundColor: '#1f2937', color: 'white' }}>Weekly</option>
+            <option value={TaskSchedule.MONTHLY} style={{ backgroundColor: '#1f2937', color: 'white' }}>Monthly</option>
           </select>
           {errors.schedule && (
-            <p className="mt-1 text-sm text-red-400">{errors.schedule}</p>
+            <p style={{ marginTop: '4px', fontSize: '14px', color: '#f87171' }}>{errors.schedule}</p>
           )}
         </div>
 
@@ -365,10 +377,16 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             }`}
             disabled={isSubmitting}
             min={formatDateForInput(new Date())}
+            required={formData.schedule !== TaskSchedule.NONE}
             placeholder={formData.schedule !== TaskSchedule.NONE ? "Required for recurring tasks" : "Optional"}
           />
           {errors.startDate && (
-            <p className="mt-1 text-sm text-red-400">{errors.startDate}</p>
+            <p style={{ marginTop: '4px', fontSize: '14px', color: '#f87171' }}>{errors.startDate}</p>
+          )}
+          {formData.schedule !== TaskSchedule.NONE && !formData.startDate && (
+            <p style={{ marginTop: '4px', fontSize: '14px', color: '#f87171' }}>
+              Please select a date for this recurring task
+            </p>
           )}
         </div>
 
@@ -404,7 +422,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           ))}
           
           {errors.websites && (
-            <p className="mt-1 text-sm text-red-400">{errors.websites}</p>
+            <p style={{ marginTop: '4px', fontSize: '14px', color: '#f87171' }}>{errors.websites}</p>
           )}
           
           {/* Add Website Button */}
@@ -430,7 +448,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
               <button
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none disabled:opacity-50 transition-colors"
-                disabled={isSubmitting || isLoading}
+                disabled={isSubmitting || isLoading || (formData.schedule !== TaskSchedule.NONE && !formData.startDate)}
               >
                 {isSubmitting ? 'Creating...' : submitText}
               </button>

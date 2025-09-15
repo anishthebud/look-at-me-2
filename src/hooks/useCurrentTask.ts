@@ -42,7 +42,6 @@ export const useCurrentTask = (tasks: Task[]): UseCurrentTaskReturn => {
         
         setIsLoading(false)
       } catch (err) {
-        console.error('Error detecting current task:', err)
         setError(err instanceof Error ? err.message : 'Failed to detect current task')
         setCurrentTask(null)
         setIsLoading(false)

@@ -51,13 +51,13 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
   const getModalStyles = () => {
     switch (type) {
       case 'success':
-        return 'glass border-green-500 text-green-300'
+        return 'bg-green-600 border-green-500 text-white'
       case 'error':
-        return 'glass border-red-500 text-red-300'
+        return 'bg-red-600 border-red-500 text-white'
       case 'info':
-        return 'glass border-blue-500 text-blue-300'
+        return 'bg-blue-600 border-blue-500 text-white'
       default:
-        return 'glass border-green-500 text-green-300'
+        return 'bg-green-600 border-green-500 text-white'
     }
   }
 
@@ -107,52 +107,53 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[10000] overflow-y-auto backdrop-blur-lg"
+      className="fixed inset-0 z-[10000] backdrop-blur-lg"
       style={{ 
         position: 'fixed', 
         top: 0, 
         left: 0, 
         right: 0, 
-        bottom: 0
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}
       onClick={handleBackdropClick}
     >
-      <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div 
-          className={`relative transform overflow-hidden rounded-2xl px-6 pb-6 pt-6 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg ${getModalStyles()} ${
-            isExiting ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
-          }`}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
-          <div className="sm:flex sm:items-start bg-green-500">
-            <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-              <div className="flex justify-center mb-6">
-                {getIcon()}
-              </div>
-              
-              <h3 className="text-xl font-bold leading-6 text-white mb-3" id="modal-title">
-                {getTitle()}
-              </h3>
-              
-              <div className="mt-2">
-                <p className="text-base text-gray-300">
-                  <span className="font-semibold text-white">"{taskName}"</span> {message}
-                </p>
-              </div>
+      <div 
+        className={`relative transform overflow-hidden rounded-2xl px-6 pb-6 pt-6 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg ${getModalStyles()} ${
+          isExiting ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <div className="sm:flex sm:items-start">
+          <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+            <div className="flex justify-center mb-6">
+              {getIcon()}
+            </div>
+            
+            <h3 className="text-xl font-bold leading-6 text-white mb-3" id="modal-title">
+              {getTitle()}
+            </h3>
+            
+            <div className="mt-2">
+              <p className="text-base text-white">
+                <span className="font-semibold">"{taskName}"</span> {message}
+              </p>
             </div>
           </div>
-          
-          <div className="mt-6 sm:mt-6 sm:flex sm:flex-row-reverse gap-3">
-            <button
-              type="button"
-              className="inline-flex w-full justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 sm:ml-3 sm:w-auto transition-all duration-200"
-              onClick={handleClose}
-            >
-              Great!
-            </button>
-          </div>
+        </div>
+        
+        <div className="mt-6 sm:mt-6 mb-6 sm:mb-6 sm:flex sm:flex-row-reverse gap-3">
+          <button
+            type="button"
+            className="inline-flex w-full justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 sm:ml-3 sm:w-auto transition-all duration-200"
+            onClick={handleClose}
+          >
+            Great!
+          </button>
         </div>
       </div>
     </div>

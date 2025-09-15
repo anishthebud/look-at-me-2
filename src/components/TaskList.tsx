@@ -5,6 +5,7 @@ import { useCurrentTask } from '../hooks/useCurrentTask'
 import { TaskCard } from './TaskCard'
 import { TaskForm } from './TaskForm'
 import { FutureTasksModal } from './FutureTasksModal'
+import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { CreateTaskData, TaskFormData } from '../types'
 import { parseWebsitesString } from '../utils/validation'
 import { useToast } from '../hooks/useToast'
@@ -53,6 +54,8 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
   const [showFutureTasksModal, setShowFutureTasksModal] = useState(false)
   const [editingFromFutureModal, setEditingFromFutureModal] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
   const formResetRef = useRef<(() => void) | null>(null)
 
   // Show initial completion modal if provided from popup
@@ -84,10 +87,8 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
   const currentTasks = sortedTasks.slice(startIndex, endIndex)
 
   const handleCreateTask = async (taskData: CreateTaskData): Promise<{ success: boolean; error?: string }> => {
-    console.log('TaskList received task data:', taskData) // Debug log
     setActionError(null)
     const result = await createTask(taskData)
-    console.log('TaskList createTask result:', result) // Debug log
     
     if (result.success) {
       setShowCreateForm(false)
@@ -150,11 +151,28 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
       return
     }
 
-    // If not found, fallback to simple delete
-    if (!located) {
-      if (!window.confirm('Are you sure you want to delete this task?')) return
+    // If not found, create a placeholder task for the modal
+    const taskForModal = located || { id: taskId, name: 'Unknown Task', schedule: TaskSchedule.NONE } as Task
+    
+    // Show the delete confirmation modal
+    setTaskToDelete(taskForModal)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async (deleteEntire?: boolean): Promise<void> => {
+    if (!taskToDelete) return
+
+    setShowDeleteModal(false)
+    setActionError(null)
+
+    const taskId = taskToDelete.id
+    const located = taskToDelete
+
+    // If task wasn't found in our lists, do simple delete
+    if (located.name === 'Unknown Task') {
       const result = await deleteTask(taskId)
       if (!result.success) setActionError(result.error || 'Failed to delete task')
+      setTaskToDelete(null)
       return
     }
 
@@ -164,20 +182,17 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
 
     // Non-recurring: normal delete
     if (!located.schedule || located.schedule === TaskSchedule.NONE) {
-      if (!window.confirm('Are you sure you want to delete this task?')) return
       const result = await deleteTask(located.id)
       if (!result.success) setActionError(result.error || 'Failed to delete task')
+      setTaskToDelete(null)
       return
     }
 
-    // Recurring: ask whether to delete entire task or just this occurrence
-    const deleteEntire = window.confirm(
-      'OK = Delete entire task\nCancel = Delete only this occurrence'
-    )
-
+    // Recurring task handling
     if (deleteEntire) {
       const result = await deleteTask(parentId)
       if (!result.success) setActionError(result.error || 'Failed to delete task')
+      setTaskToDelete(null)
       return
     }
 
@@ -190,7 +205,6 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
         const result = await updateTask(parentId, { nextOccurrenceAnchor: located.startDate })
         if (!result.success) setActionError(result.error || 'Failed to update task')
       }
-      return
     } else {
       // Deleting the base future occurrence: advance base to the next base date
       if (located.startDate) {
@@ -198,11 +212,17 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
         if (nextBaseIso) {
           const result = await updateTask(located.id, { startDate: nextBaseIso })
           if (!result.success) setActionError(result.error || 'Failed to update task date')
-          return
         }
       }
       // Fallback: if cannot compute next, do nothing
     }
+    
+    setTaskToDelete(null)
+  }
+
+  const handleDeleteCancel = (): void => {
+    setShowDeleteModal(false)
+    setTaskToDelete(null)
   }
 
   const handleStartTask = async (taskId: string): Promise<void> => {
@@ -269,7 +289,7 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
     }
     
     if (tasks.length === 0) {
-      return 'No tasks yet. Create your first task to get started!'
+      return 'Create a task to get started!'
     }
     
     return 'No tasks on this page.'
@@ -317,8 +337,8 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">My Tasks</h1>
-          <p className="text-gray-300 text-lg">
+          <h1 className="text-3xl font-bold text-white mb-2" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)' }}>My Tasks</h1>
+          <p className="text-white text-lg" style={{ textShadow: '1px 1px 2px rgba(0, 0, 0, 0.7)' }}>
             {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} • Page {currentPage} of {totalPages}
           </p>
         </div>
@@ -430,15 +450,15 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
             </div>
           ) : (
             <div className="text-center py-16">
-              <div className="text-gray-400 text-8xl mb-6">📋</div>
-              <h3 className="text-xl font-medium text-white mb-3">No tasks here</h3>
-              <p className="text-gray-400 text-lg mb-6">{getEmptyStateMessage()}</p>
+              <div className="text-gray-400 mb-6" style={{ fontSize: '10rem' }}>📋</div>
+              <h3 className="text-xl font-medium text-white mb-3">No tasks here!</h3>
+              <p className="text-white-400 text-lg mb-6">{getEmptyStateMessage()}</p>
               {tasks.length === 0 && (
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all duration-200"
                 >
-                  Create Your First Task
+                  Create a Task
                 </button>
               )}
             </div>
@@ -503,6 +523,14 @@ export const TaskList: React.FC<TaskListProps> = ({ className = '', initialCompl
         onStart={handleStartTask}
         onEdit={handleEdit}
         onDelete={handleDeleteTask}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        task={taskToDelete}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
       />
     </div>
   )

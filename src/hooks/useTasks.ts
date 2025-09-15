@@ -99,7 +99,6 @@ export const useTasks = (): UseTasksReturn => {
       setState(prev => ({ ...prev, isLoading: true, error: null }))
       
       const tasks = await taskStorage.getTasks()
-      console.log('Loaded tasks from storage:', tasks) // Debug log
       
       // Filter out completed tasks for display (keep them for history)
       const activeTasks = tasks.filter(task => task.state !== TaskState.COMPLETED)
@@ -147,7 +146,6 @@ export const useTasks = (): UseTasksReturn => {
         isLoading: false
       }))
     } catch (error) {
-      console.error('Error loading tasks:', error)
       setState(prev => ({
         ...prev,
         error: 'Failed to load tasks',
@@ -160,11 +158,9 @@ export const useTasks = (): UseTasksReturn => {
    * Create a new task
    */
   const createTask = useCallback(async (taskData: CreateTaskData): Promise<{ success: boolean; error?: string }> => {
-    console.log('useTasks createTask called with:', taskData) // Debug log
     try {
       // Validate task data
       const validation = validateTask(taskData)
-      console.log('Task validation result:', validation) // Debug log
       if (!validation.isValid) {
         return {
           success: false,
@@ -197,7 +193,6 @@ export const useTasks = (): UseTasksReturn => {
         order: currentTasks.length
       }
 
-      console.log('Created new task:', newTask) // Debug log
       
       const success = await taskStorage.addTask(newTask)
       if (!success) {
@@ -210,7 +205,6 @@ export const useTasks = (): UseTasksReturn => {
       await loadTasks()
       return { success: true }
     } catch (error) {
-      console.error('Error creating task:', error)
       return {
         success: false,
         error: 'Failed to create task'
@@ -276,7 +270,6 @@ export const useTasks = (): UseTasksReturn => {
       await loadTasks()
       return { success: true }
     } catch (error) {
-      console.error('Error updating task:', error)
       return {
         success: false,
         error: 'Failed to update task'
@@ -318,7 +311,6 @@ export const useTasks = (): UseTasksReturn => {
       await loadTasks()
       return { success: true }
     } catch (error) {
-      console.error('Error deleting task:', error)
       return {
         success: false,
         error: 'Failed to delete task'
@@ -358,7 +350,6 @@ export const useTasks = (): UseTasksReturn => {
         }
       }
       
-      console.log('Successfully created tabs for task:', task.name, 'Tabs:', tabs.length)
 
       // Try to create tab group using chrome.tabs.group (more stable approach)
       const tabIds = tabs.map(tab => tab.id).filter((id): id is number => id !== undefined)
@@ -376,7 +367,6 @@ export const useTasks = (): UseTasksReturn => {
           })
         })
         
-        console.log('Tab group created with ID:', groupId)
         
         // Step 2: Update the group properties using chrome.tabGroups.update
         await new Promise<void>((resolve, reject) => {
@@ -392,10 +382,8 @@ export const useTasks = (): UseTasksReturn => {
           })
         })
         
-        console.log('Tab group updated with title and color')
         
       } catch (error) {
-        console.log('Tab group creation failed, continuing without grouping:', error)
         // Continue without tab group - this is not a critical failure
       }
 
@@ -417,13 +405,9 @@ export const useTasks = (): UseTasksReturn => {
       // Get the updated task and log it
       const updatedTasks = await taskStorage.getTasks()
       const updatedTask = updatedTasks.find(t => t.id === taskId)
-      console.log('Task after start operation completed:', updatedTask)
-      console.log('Tabs created:', tabs)
-      console.log('Tab group ID:', groupId)
       
       return { success: true }
     } catch (error) {
-      console.error('Error starting task:', error)
       return {
         success: false,
         error: 'Failed to start task'
@@ -453,29 +437,22 @@ export const useTasks = (): UseTasksReturn => {
         }
       }
 
-      console.log('Continuing task:', task.name)
 
       // Try to find and focus on the existing tab group, or create a new one
       let tabGroupFocused = false
       try {
         const existingTabGroup = await chromeTabGroups.findByTitle(task.name)
         if (existingTabGroup) {
-          console.log('Found existing tab group for task:', existingTabGroup.id)
           const focused = await chromeTabGroups.focusGroup(existingTabGroup.id)
           if (focused) {
-            console.log('Successfully focused on existing tab group:', existingTabGroup.id)
             tabGroupFocused = true
           } else {
-            console.log('Failed to focus on existing tab group:', existingTabGroup.id)
           }
         } else {
-          console.log('No existing tab group found for task:', task.name)
-          console.log('Creating new tab group for continue task...')
           
           // Create new tabs for the task websites
           const tabs = await chromeTabs.createMultiple(task.websites)
           if (tabs && tabs.length > 0) {
-            console.log('Created tabs for continue task:', tabs.length)
             
             // Create tab group with the new tabs
             const tabIds = tabs.map(tab => tab.id).filter((id): id is number => id !== undefined)
@@ -493,7 +470,6 @@ export const useTasks = (): UseTasksReturn => {
                 })
               })
 
-              console.log('Tab group created for continue task with ID:', groupId)
 
               // Step 2: Update the group properties using chrome.tabGroups.update
               await new Promise<void>((resolve, reject) => {
@@ -509,32 +485,21 @@ export const useTasks = (): UseTasksReturn => {
                 })
               })
 
-              console.log('Tab group updated for continue task with title and color')
               tabGroupFocused = true
               
             } catch (error) {
-              console.log('Tab group creation failed for continue task, continuing without grouping:', error)
               // Continue without tab group - this is not a critical failure
             }
           } else {
-            console.log('Failed to create tabs for continue task')
           }
         }
       } catch (error) {
-        console.log('Error with tab group operations for continue task:', error)
         // Continue without focusing - this is not a critical failure
       }
 
-      // Log continuation details
-      console.log('Task continuation completed:', {
-        taskId: task.id,
-        taskName: task.name,
-        tabGroupFocused
-      })
 
       return { success: true }
     } catch (error) {
-      console.error('Error continuing task:', error)
       return {
         success: false,
         error: 'Failed to continue task'
@@ -564,26 +529,20 @@ export const useTasks = (): UseTasksReturn => {
         }
       }
 
-      console.log('Starting task completion for:', task.name)
 
       // Try to find and close the associated tab group
       let tabGroupClosed = false
       try {
         const tabGroup = await chromeTabGroups.findByTitle(task.name)
         if (tabGroup) {
-          console.log('Found tab group for task:', tabGroup.id)
           const closed = await chromeTabGroups.remove(tabGroup.id)
           if (closed) {
-            console.log('Tab group closed successfully:', tabGroup.id)
             tabGroupClosed = true
           } else {
-            console.log('Failed to close tab group:', tabGroup.id)
           }
         } else {
-          console.log('No tab group found for task:', task.name)
         }
       } catch (error) {
-        console.log('Error closing tab group:', error)
         // Continue with task completion even if tab group closure fails
       }
 
@@ -622,18 +581,10 @@ export const useTasks = (): UseTasksReturn => {
         }
       }
 
-      // Log completion details
-      console.log('Task completed successfully:', {
-        taskId: task.id,
-        taskName: task.name,
-        completedAt: new Date().toISOString(),
-        tabGroupClosed
-      })
 
       await loadTasks()
       return { success: true }
     } catch (error) {
-      console.error('Error completing task:', error)
       return {
         success: false,
         error: 'Failed to complete task'

@@ -7,6 +7,7 @@ export const MAX_TASKS_PER_PAGE = 8
 export const STORAGE_KEYS = {
   TASKS: 'tasks',
   USER_PREFERENCES: 'userPreferences',
+  THEME_PREFERENCES: 'themePreferences',
   LAST_RESET: 'lastReset'
 } as const
 

@@ -186,14 +186,14 @@ export const validateTaskWebsites = (websites: string[]): ValidationError[] => {
 /**
  * Validates task start date
  */
-export const validateTaskStartDate = (startDate: Date, schedule: string): ValidationError[] => {
+export const validateTaskStartDate = (startDate: Date | null | undefined, schedule: string): ValidationError[] => {
   const errors: ValidationError[] = []
   
   // Start date is required for recurring tasks (not 'none')
   if (schedule !== 'none' && !startDate) {
     errors.push({
       field: 'startDate',
-      message: 'Start date is required for recurring tasks'
+      message: 'Scheduled date is required for recurring tasks'
     })
     return errors
   }
@@ -206,7 +206,7 @@ export const validateTaskStartDate = (startDate: Date, schedule: string): Valida
     if (startDate < today) {
       errors.push({
         field: 'startDate',
-        message: 'Start date cannot be in the past'
+        message: 'Scheduled date cannot be in the past'
       })
     }
   }
@@ -222,7 +222,7 @@ export const validateTask = (taskData: {
   description?: string
   websites: string[]
   schedule?: string
-  startDate?: Date
+  startDate?: Date | null
 }): ValidationResult => {
   const errors: ValidationError[] = []
   
@@ -234,12 +234,8 @@ export const validateTask = (taskData: {
   
   errors.push(...validateTaskWebsites(taskData.websites))
   
-  if (taskData.startDate) {
-    errors.push(...validateTaskStartDate(taskData.startDate, taskData.schedule || 'none'))
-  } else if (taskData.schedule && taskData.schedule !== 'none') {
-    // For recurring tasks without start date, add validation error
-    errors.push(...validateTaskStartDate(new Date(), taskData.schedule))
-  }
+  // Always validate start date - it's required for recurring tasks
+  errors.push(...validateTaskStartDate(taskData.startDate, taskData.schedule || 'none'))
   
   return {
     isValid: errors.length === 0,

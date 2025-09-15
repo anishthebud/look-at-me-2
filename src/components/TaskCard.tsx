@@ -77,7 +77,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         minute: '2-digit'
       }).format(date)
     } catch (error) {
-      console.error('Error formatting date:', error, 'Date value:', dateString)
       return 'Invalid date'
     }
   }
@@ -93,17 +92,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
         
         {task.description && (
-          <p className="text-sm text-gray-300 mb-4 line-clamp-2">
+          <p className="text-sm text-white mb-4 line-clamp-2">
             {task.description}
           </p>
         )}
         
         {/* Only show recurrence if it's not NONE */}
         {task.schedule !== TaskSchedule.NONE && (
-          <div className="mb-4">
-            <p className="text-xs text-gray-400 mb-2 font-medium">Recurrence:</p>
-            <span className="px-3 py-1 bg-blue-500 bg-opacity-20 text-blue-300 text-sm rounded-full border border-blue-500 border-opacity-30">
-              {getScheduleText(task.schedule)}
+          <div className="mb-4 flex justify-start">
+            <span className="py-1 bg-blue-500 bg-opacity-20 text-white text-sm rounded-full border border-blue-500 border-opacity-30">
+              📅 {getScheduleText(task.schedule)}
             </span>
           </div>
         )}
@@ -114,10 +112,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               {task.websites.map((website, index) => (
                 <span
                   key={index}
-                  className="px-3 py-1 bg-gray-500 bg-opacity-20 text-gray-300 text-sm rounded-full truncate max-w-[200px] border border-gray-500 border-opacity-30"
+                  className="px-3 py-1 bg-gray-500 bg-opacity-20 text-white text-sm rounded-full truncate max-w-[200px] border border-gray-500 border-opacity-30"
                   style={{
                     backgroundColor: 'rgba(107, 114, 128, 0.2)',
-                    color: '#d1d5db',
+                    color: '#ffffff',
                     borderColor: 'rgba(107, 114, 128, 0.3)',
                     borderWidth: '1px',
                     borderStyle: 'solid'
@@ -141,14 +139,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               </button>
               <button
                 onClick={() => onEdit(task.id)}
-                className="px-4 py-3 bg-gray-500 bg-opacity-20 text-gray-300 text-sm rounded-xl hover:bg-gray-500 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-gray-500 border border-gray-500 border-opacity-30 transition-all duration-200"
+                className="px-4 py-3 text-white text-sm rounded-xl focus:outline-none focus:ring-2 transition-all duration-200"
+                style={{
+                  backgroundColor: 'var(--theme-accent, #3b82f6)',
+                  border: '1px solid var(--theme-accent, #3b82f6)'
+                }}
                 title="Edit task"
               >
                 ✏️
               </button>
               <button
                 onClick={() => onDelete(task.id)}
-                className="px-4 py-3 bg-red-500 bg-opacity-20 text-red-300 text-sm rounded-xl hover:bg-red-500 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-red-500 border border-red-500 border-opacity-30 transition-all duration-200"
+                className="px-4 py-3 text-white text-sm rounded-xl focus:outline-none focus:ring-2 transition-all duration-200"
+                style={{
+                  backgroundColor: 'var(--theme-accent, #3b82f6)',
+                  border: '1px solid var(--theme-accent, #3b82f6)'
+                }}
                 title="Delete task"
               >
                 🗑️
@@ -202,7 +208,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
           
           {task.state === TaskState.COMPLETED && (
-            <div className="flex-1 px-4 py-3 bg-green-500 bg-opacity-20 text-green-300 text-sm rounded-xl text-center border border-green-500 border-opacity-30 font-medium">
+            <div className="flex-1 px-4 py-3 bg-green-500 bg-opacity-20 text-white text-sm rounded-xl text-center border border-green-500 border-opacity-30 font-medium">
               ✅ Task Completed
             </div>
           )}

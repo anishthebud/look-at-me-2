@@ -13,7 +13,6 @@ export const chromeStorage = {
     return new Promise((resolve) => {
       chrome.storage.local.get([key], (result) => {
         if (chrome.runtime.lastError) {
-          console.error('Chrome storage get error:', chrome.runtime.lastError)
           resolve(null)
         } else {
           resolve(result[key] || null)
@@ -29,7 +28,6 @@ export const chromeStorage = {
     return new Promise((resolve) => {
       chrome.storage.local.set({ [key]: value }, () => {
         if (chrome.runtime.lastError) {
-          console.error('Chrome storage set error:', chrome.runtime.lastError)
           resolve(false)
         } else {
           resolve(true)
@@ -45,7 +43,6 @@ export const chromeStorage = {
     return new Promise((resolve) => {
       chrome.storage.local.remove([key], () => {
         if (chrome.runtime.lastError) {
-          console.error('Chrome storage remove error:', chrome.runtime.lastError)
           resolve(false)
         } else {
           resolve(true)
@@ -66,7 +63,6 @@ export const chromeTabs = {
     return new Promise((resolve) => {
       chrome.tabs.create({ url }, (tab) => {
         if (chrome.runtime.lastError) {
-          console.error('Chrome tabs create error:', chrome.runtime.lastError)
           resolve(null)
         } else {
           resolve(tab)
@@ -108,7 +104,6 @@ export const chromeTabGroups = {
     return new Promise((resolve) => {
       // Check if tab groups API is available
       if (!chrome.tabGroups) {
-        console.log('Chrome tab groups API not available - feature not supported in this Chrome version')
         resolve(null)
         return
       }
@@ -117,17 +112,14 @@ export const chromeTabGroups = {
       const tabGroupsApi = chrome.tabGroups as any
       
       if (!tabGroupsApi.create) {
-        console.log('Chrome tab groups create API not available - feature not supported in this Chrome version')
         resolve(null)
         return
       }
       
       tabGroupsApi.create(options, (group: any) => {
         if (chrome.runtime.lastError) {
-          console.log('Chrome tab groups create error (non-critical):', chrome.runtime.lastError.message)
           resolve(null)
         } else {
-          console.log('Tab group created successfully:', group)
           resolve(group)
         }
       })
@@ -147,7 +139,6 @@ export const chromeTabGroups = {
   ): Promise<any> => {
     return new Promise((resolve) => {
       if (!chrome.tabGroups) {
-        console.error('Chrome tab groups API not available')
         resolve(null)
         return
       }
@@ -155,14 +146,12 @@ export const chromeTabGroups = {
       const tabGroupsApi = chrome.tabGroups as any
       
       if (!tabGroupsApi.update) {
-        console.error('Chrome tab groups update API not available')
         resolve(null)
         return
       }
       
       tabGroupsApi.update(groupId, updateProperties, (group: any) => {
         if (chrome.runtime.lastError) {
-          console.error('Chrome tab groups update error:', chrome.runtime.lastError)
           resolve(null)
         } else {
           resolve(group)
@@ -177,7 +166,6 @@ export const chromeTabGroups = {
   remove: async (groupId: number): Promise<boolean> => {
     return new Promise((resolve) => {
       if (!chrome.tabs) {
-        console.error('Chrome tabs API not available')
         resolve(false)
         return
       }
@@ -185,7 +173,6 @@ export const chromeTabGroups = {
       // Get tabs in the group and close them
       chrome.tabs.query({ groupId }, (tabs) => {
         if (chrome.runtime.lastError) {
-          console.error('Chrome tabs query error:', chrome.runtime.lastError)
           resolve(false)
           return
         }
@@ -198,7 +185,6 @@ export const chromeTabGroups = {
         
         chrome.tabs.remove(tabIds, () => {
           if (chrome.runtime.lastError) {
-            console.error('Chrome tabs remove error:', chrome.runtime.lastError)
             resolve(false)
           } else {
             resolve(true)
@@ -225,7 +211,6 @@ export const chromeTabGroups = {
         // Step 1: Group the tabs using chrome.tabs.group
         chrome.tabs.group({ tabIds }, (groupId) => {
           if (chrome.runtime.lastError) {
-            console.log('Chrome tabs.group error:', chrome.runtime.lastError.message)
             resolve(null)
             return
           }
@@ -236,16 +221,13 @@ export const chromeTabGroups = {
             color: (color || chromeTabGroups.getRandomColor()) as any
           }, () => {
             if (chrome.runtime.lastError) {
-              console.log('Chrome tabGroups.update error:', chrome.runtime.lastError.message)
               resolve(null)
             } else {
-              console.log('Tab group created successfully with chrome.tabs.group:', groupId)
               resolve({ id: groupId, title })
             }
           })
         })
       } catch (error) {
-        console.log('Tab group creation failed:', error)
         resolve(null)
       }
     })
@@ -257,14 +239,12 @@ export const chromeTabGroups = {
   findByTitle: async (title: string): Promise<{ id: number; title: string } | null> => {
     return new Promise((resolve) => {
       if (!chrome.tabGroups) {
-        console.log('Chrome tab groups API not available')
         resolve(null)
         return
       }
 
       chrome.tabGroups.query({}, (groups) => {
         if (chrome.runtime.lastError) {
-          console.log('Chrome tab groups query error:', chrome.runtime.lastError.message)
           resolve(null)
           return
         }
@@ -285,7 +265,6 @@ export const chromeTabGroups = {
   getCurrentTabGroup: async (): Promise<{ id: number; title: string } | null> => {
     return new Promise((resolve) => {
       if (!chrome.tabs || !chrome.tabGroups) {
-        console.log('Chrome tabs or tab groups API not available')
         resolve(null)
         return
       }
@@ -293,14 +272,12 @@ export const chromeTabGroups = {
       // Get the current active tab
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (chrome.runtime.lastError || !tabs || tabs.length === 0) {
-          console.log('No active tab found')
           resolve(null)
           return
         }
 
         const activeTab = tabs[0]
         if (activeTab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE) {
-          console.log('Active tab is not in a group')
           resolve(null)
           return
         }
@@ -308,7 +285,6 @@ export const chromeTabGroups = {
         // Get the group information
         chrome.tabGroups.get(activeTab.groupId, (group) => {
           if (chrome.runtime.lastError) {
-            console.log('Error getting tab group:', chrome.runtime.lastError.message)
             resolve(null)
             return
           }
@@ -325,7 +301,6 @@ export const chromeTabGroups = {
   focusGroup: async (groupId: number): Promise<boolean> => {
     return new Promise((resolve) => {
       if (!chrome.tabGroups) {
-        console.log('Chrome tab groups API not available')
         resolve(false)
         return
       }
@@ -333,13 +308,11 @@ export const chromeTabGroups = {
       // First, get all tabs in the group
       chrome.tabs.query({ groupId }, (tabs) => {
         if (chrome.runtime.lastError) {
-          console.log('Chrome tabs query error:', chrome.runtime.lastError.message)
           resolve(false)
           return
         }
 
         if (tabs.length === 0) {
-          console.log('No tabs found in group:', groupId)
           resolve(false)
           return
         }
@@ -349,10 +322,8 @@ export const chromeTabGroups = {
         if (firstTab.id) {
           chrome.tabs.update(firstTab.id, { active: true }, (tab) => {
             if (chrome.runtime.lastError) {
-              console.log('Chrome tabs update error:', chrome.runtime.lastError.message)
               resolve(false)
             } else {
-              console.log('Focused on tab group:', groupId)
               resolve(true)
             }
           })

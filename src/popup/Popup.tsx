@@ -2,9 +2,17 @@ import React, { useState, useEffect } from 'react'
 import { Task, TaskState } from '../types'
 import { useTasks } from '../hooks/useTasks'
 import { useCurrentTask } from '../hooks/useCurrentTask'
+import { useTheme } from '../hooks/useTheme'
 import { useToast } from '../hooks/useToast'
 import { Toast } from '../components/Toast'
 import './Popup.css'
+
+const hexToRgb = (hex: string): string => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result 
+    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+    : '59, 130, 246' // fallback
+}
 
 export const Popup = () => {
   const {
@@ -23,6 +31,7 @@ export const Popup = () => {
 
   const { modal, removeModal, showSuccessModal, showErrorModal } = useToast()
   const { currentTask } = useCurrentTask(tasks)
+  const { theme, preferences, isThemeLoaded } = useTheme() // initialize theme variables for popup
 
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -30,6 +39,10 @@ export const Popup = () => {
   useEffect(() => {
     refreshTasks()
   }, [refreshTasks])
+
+  // Log theme information for popup
+  useEffect(() => {
+  }, [theme, preferences, isThemeLoaded])
 
 
   const handleStartTask = async (taskId: string): Promise<void> => {
@@ -123,12 +136,23 @@ export const Popup = () => {
   }
 
   return (
-    <main className="popup-container">
+    <main 
+      className={`popup-container theme-${theme.id}`}
+      style={{
+        background: theme.backgroundGradient || theme.surface,
+        color: theme.text
+      }}
+    >
       <div className="popup-header">
-        <h3>Task Manager</h3>
+        <h3 style={{ color: theme.text }}>Look At Me</h3>
         <button
           onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') })}
           className="create-task-btn"
+          style={{
+            background: `rgba(${hexToRgb(theme.accent)}, 0.2)`,
+            borderColor: `rgba(${hexToRgb(theme.accent)}, 0.3)`,
+            color: theme.accent
+          }}
         >
           Manage Tasks
         </button>
@@ -141,7 +165,7 @@ export const Popup = () => {
       )}
 
       {isLoading && (
-        <div className="loading">Loading tasks...</div>
+        <div className="loading" style={{ color: theme.textSecondary }}>Loading tasks...</div>
       )}
 
       {error && (
@@ -160,7 +184,7 @@ export const Popup = () => {
           return (
             <div className="no-tasks">
               <div className="no-tasks-icon">🚀</div>
-              <p>No tasks available. Create a task to get started!</p>
+              <p style={{ color: theme.textSecondary }}>No tasks available. Create a task to get started!</p>
             </div>
           )
         }
@@ -180,16 +204,27 @@ export const Popup = () => {
             .map((task) => {
               const isCurrentTask = currentTask && currentTask.id === task.id
               return (
-            <div key={task.id} className={`task-card ${isCurrentTask ? 'current-task' : ''}`}>
+            <div 
+              key={task.id} 
+              className={`task-card ${isCurrentTask ? 'current-task' : ''}`}
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                borderColor: isCurrentTask ? theme.accent : 'rgba(255, 255, 255, 0.1)',
+                color: theme.text
+              }}
+            >
               <div className="task-header">
-                <h4 className="task-name">{task.name}</h4>
+                <h4 className="task-name" style={{ color: theme.text }}>{task.name}</h4>
                 <span className={`task-state ${getStateColor(task.state)}`}>
                   {isCurrentTask ? 'Current Task' : getStateText(task.state)}
                 </span>
               </div>
               
               {task.description && (
-                <p className={`task-description ${isCurrentTask ? 'current-task-description' : ''}`}>
+                <p 
+                  className={`task-description ${isCurrentTask ? 'current-task-description' : ''}`}
+                  style={{ color: theme.textSecondary }}
+                >
                   {task.description}
                 </p>
               )}
@@ -200,12 +235,21 @@ export const Popup = () => {
                     <button
                       onClick={() => handleStartTask(task.id)}
                       className="action-btn start-btn"
+                      style={{
+                        background: `rgba(${hexToRgb('#10b981')}, 1)`,
+                        color: 'white'
+                      }}
                     >
                       Start
                     </button>
                     <button
                       onClick={() => handleDeleteTask(task.id)}
                       className="action-btn delete-btn"
+                      style={{
+                        background: `rgba(${hexToRgb('#ef4444')}, 0.2)`,
+                        borderColor: `rgba(${hexToRgb('#ef4444')}, 0.3)`,
+                        color: '#fca5a5'
+                      }}
                     >
                       Delete
                     </button>
@@ -218,6 +262,10 @@ export const Popup = () => {
                       <button
                         onClick={() => handleContinueTask(task.id)}
                         className="action-btn continue-btn"
+                        style={{
+                          background: `rgba(${hexToRgb('#eab308')}, 1)`,
+                          color: 'white'
+                        }}
                       >
                         Continue
                       </button>
@@ -225,6 +273,10 @@ export const Popup = () => {
                     <button
                       onClick={() => handleCompleteTask(task.id)}
                       className={`action-btn complete-btn ${isCurrentTask ? 'full-width' : ''}`}
+                      style={{
+                        background: `rgba(${hexToRgb('#16a34a')}, 1)`,
+                        color: 'white'
+                      }}
                     >
                       Complete
                     </button>
@@ -241,10 +293,14 @@ export const Popup = () => {
             
             {displayTasks.length > 5 && (
               <div className="more-tasks">
-                <p>+{displayTasks.length - 5} more {inProgressTasks.length > 0 ? 'tasks in progress' : 'unstarted tasks'}</p>
+                <p style={{ color: theme.textSecondary }}>+{displayTasks.length - 5} more {inProgressTasks.length > 0 ? 'tasks in progress' : 'unstarted tasks'}</p>
                 <button
                   onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') })}
                   className="view-all-btn"
+                  style={{
+                    background: `rgba(${hexToRgb(theme.accent)}, 1)`,
+                    color: 'white'
+                  }}
                 >
                   View All in New Tab
                 </button>
