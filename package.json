@@ -3,7 +3,7 @@
   "displayName": "Look At Me",
   "version": "1.0.0",
   "author": "*Anish Budida",
-  "description": "A Chrome extension that forces you to look at it and think about what you need to do and gets you to do it. But mainly just a productivity tool to help you get things done.",
+  "description": "A Chrome extension that forces you to look at it and think about what you need to do and gets you to do it.",
   "type": "module",
   "license": "MIT",
   "keywords": [
